@@ -1,0 +1,12 @@
+Première fois :
+
+git clone https://github.com/ProjetC2016/Projet.git/
+git init
+git remote add origin https://github.com/ProjetC2016/Projet.git/
+
+A chaque fois :
+
+git pull origin master
+git add -A
+git commit -m "message qui explique les modifs"
+git push -u origin master

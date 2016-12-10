@@ -8,6 +8,4 @@
 #include <time.h>
 #include <fcntl.h>
 
-void createPipe();
-
-void createClient();
+void createServer();

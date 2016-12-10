@@ -1,17 +1,13 @@
-#include "tchatche.h"
+#include "tchatche_server.h"
 #include <stdio.h>
 #include <stdlib.h>
 
 #define DIRECTORY_LENGTH 1024
 
-void createPipe(){
+void createServer(){
   if(access("serverPipe", F_OK) == -1){
     mkfifo("serverPipe", 0666);
   }
-}
-
-void createServer(){
-  createPipe();
   char *buffer = malloc(DIRECTORY_LENGTH*sizeof(char));
   int server = open("serverPipe", O_RDONLY);
   do{
