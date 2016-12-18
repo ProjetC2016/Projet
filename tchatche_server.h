@@ -9,3 +9,4 @@
 #include <fcntl.h>
 
 void createServer();
+void connexion(char* buffer, int l);
