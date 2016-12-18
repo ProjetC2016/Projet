@@ -1,25 +1,15 @@
 CC=gcc
 CFLAGS=-Wall
-EXEC=nim1 nim2 nim3 nim4
-NAMEOPTION=OPTION
+EXEC=tchatche tchatche_server
 
 all: $(EXEC)
 
-nim1 : exo1.c
-	$(CC) $(CFLAGS) $^ -o $@ -D $(NAMEOPTION)=playClassic
+tchatche : tchatche.c
+	$(CC) $(CFLAGS) $^ -o $@
 
-nim2 : exo1.c
-	$(CC) $(CFLAGS) $^ -o $@ -D $(NAMEOPTION)=playRandom
+tchatche_server : tchatche_server.c
+	$(CC) $(CFLAGS) $^ -o $@
 
-nim3 : exo1.c
-	$(CC) $(CFLAGS) $^ -o $@ -D $(NAMEOPTION)=play1
-
-nim4 : exo1.c
-	$(CC) $(CFLAGS) $^ -o $@ -D $(NAMEOPTION)=playOptimal
-
-
-.PHONY: cleanall
-
-cleanall:
-	@rm -rf main
+clean:
+	@rm -rf tchatche tchatche_server
 	@echo "Cleared"
