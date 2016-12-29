@@ -6,7 +6,7 @@
 
 int id = 1;; //id du client (augmente de 1 à chaque ajout d'un nouveau client)
 
-/* Fonction qui crée le utbe ud server */
+/* Fonction qui crée le tube du server */
 void createServer(){
   if(access("serverPipe", F_OK) == -1){ //si le tube server n'existe pas
     mkfifo("serverPipe", 0666); //je le crée
@@ -14,7 +14,7 @@ void createServer(){
 }
 
 /* Fonction de connexion : récupère l'intel de connexion et offre un id */
-void connexion(char* buffer, int l){
+void connexionServer(char* buffer, int l){
   char* pseudo = malloc(((l-8)/2)*sizeof(char)); //string pour le pseudo
   strncpy(pseudo,buffer+8,(l-8)/2); //on le récupère dans le buffer
   pseudo[((l-8)/2)]='\0';
@@ -28,6 +28,54 @@ void connexion(char* buffer, int l){
   free(pseudo); //on free ! (on a tout compris)
   free(intel);
 }
+
+/*Fonction de déconnexion : récupère l'id et le déconnecte */
+void deconnexionServer(char* buffer, int l){
+  //TODO: Ecrire cette fonction (similaire à connexion)
+  //1) déconnecter le client (i.e) le supprimer de la liste des clients en ligne
+  //2) virer toute info relative à l'utilisateur
+  //3) nettoyer/supprimer les tubes
+}
+
+/*Fonction d'envoi de message public : récupère le message et le transmet */
+void sendPublicMessageServer(char* buffer, int l){
+  //TODO: Ecrire cette fonction
+  //1) recevoir le message
+  //2) le transmettre à tous les clients de la liste
+}
+
+/*Fonction d'envoi de message privé : récupère le message et le transmet */
+void sendPrivateMessageServer(char* buffer, int l){
+  //TODO: Ecrire cette fonction (similaire à sendPublic)
+  //1) recevoir le message
+  //2) le transmettre à la personne désignée
+}
+
+/*Fonction pour obtenir la liste des utilisateurs */
+void listUsersServer(char* buffer, int l){
+  //TODO: Ecrire cette fonction
+  //liste un par un les utilisateurs
+}
+
+/*Fonction pour forcer la déconnexion de tous les id + shutdown du serveur */
+void shutServer(char* buffer, int l){
+  //TODO: Ecrire cette fonction
+  //1) déconnecte tous les id (utiliser deconnexion)
+  //2) supprimer le server
+}
+
+/*Fonction pour débugger le serveur */
+void debugServer(char* buffer, int l){
+  //TODO: Ecrire cette fonction
+  //EUH......
+}
+
+/*Fonction pour envoyer un fichier */
+void sendFileServer(char* buffer, int l){
+  //TODO: Ecrire cette fonction
+  //Complexe ! A faire en dernier
+}
+
 void mainServer(){
   int server = open("serverPipe", O_RDONLY); //ouverture du tube server en lecture
   char *buffer = malloc(DIRECTORY_LENGTH*sizeof(char)); //buffer
@@ -47,8 +95,30 @@ void mainServer(){
     printf("Type :%s\n",type);
     if(strcmp(type,"HELO")==0){ //si le message est une demande de connexion
       printf("Connexion en cours...\n");
-      connexion(buffer,l); //on execute la fonction correspondante
+      connexionServer(buffer,l); //on execute la fonction correspondante
       printf("Connexion terminée !\n");
+    }
+    //A compléter
+    else if(strcmp(type,"BYEE")==0){ //si le message est une demande de déconnexion
+      deconnexionServer(buffer,l); //on execute la fonction correspondante
+    }
+    else if(strcmp(type,"BCST")==0){ //si le message est une demande d'envoi de message public
+      sendPublicMessageServer(buffer,l); //on execute la fonction correspondante
+    }
+    else if(strcmp(type,"PRVT")==0){ //si le message est une demande d'envoi de message privé
+      sendPrivateMessageServer(buffer,l); //on execute la fonction correspondante
+    }
+    else if(strcmp(type,"LIST")==0){ //si le message est une demande de la liste des utilisateurs
+      listUsersServer(buffer,l); //on execute la fonction correspondante
+    }
+    else if(strcmp(type,"SHUT")==0){ //si le message est une demande de shutdown total
+      shutServer(buffer,l); //on execute la fonction correspondante
+    }
+    else if(strcmp(type,"DEBG")==0){ //si le message est une demande de debug
+      debugServer(buffer,l); //on execute la fonction correspondante
+    }
+    else if(strcmp(type,"FILE")==0){ //si le message est une demande d'envoi de fichier
+      sendFileServer(buffer,l); //on execute la fonction correspondante
     }
   }
   free(buffer); //on free !

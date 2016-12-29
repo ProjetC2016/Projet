@@ -9,4 +9,12 @@
 #include <fcntl.h>
 
 void createServer();
-void connexion(char* buffer, int l);
+void connexionServer(char* buffer, int l);
+void deconnexionServer(char* buffer, int l);
+void sendPublicMessageServer(char* buffer, int l);
+void sendPrivateMessageServer(char* buffer, int l);
+void listUsersServer(char* buffer, int l);
+void shutServer(char* buffer, int l);
+void debugServer(char* buffer, int l);
+void sendFileServer(char* buffer, int l);
+void mainServer();
