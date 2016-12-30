@@ -7,11 +7,12 @@
 int client = 0;
 int id = 0;
 int server;
+char *pseudo;
 
 void createClient(){
   server = open("serverPipe", O_WRONLY); //on ouvre le tube server en écriture
   char *buffer = malloc(DIRECTORY_LENGTH*sizeof(char));
-  char *pseudo = malloc(DIRECTORY_LENGTH*sizeof(char));
+  pseudo = malloc(DIRECTORY_LENGTH*sizeof(char));
   printf("Pseudo> ");
   fgets(buffer, DIRECTORY_LENGTH, stdin); //on récupère le pseudo
   strncpy(pseudo,buffer,strlen(buffer)-1); //on le stocke dans la variable correspondante
@@ -19,10 +20,10 @@ void createClient(){
   if(access(pseudo, F_OK) == -1){ //si le fichier n'est pas crée
     mkfifo(pseudo, 0666); //je le crée
   }
-  char* intel = malloc((8+2*strlen(pseudo)+1)*sizeof(char)); //infos envoyées au serveur
-  sprintf(intel,"%4d%s%s%s",8+2*(int)(strlen(pseudo)),"HELO",pseudo,pseudo); //on crée l'intel CONNEXION correspondant
-  intel[8+2*strlen(pseudo)]='\0';
-  write(server, intel, 8+2*strlen(pseudo)); //on l'envoie au server
+  char* intel = malloc((16+2*strlen(pseudo)+1)*sizeof(char)); //infos envoyées au serveur
+  sprintf(intel,"%4d%s%4d%s%4d%s",16+2*(int)(strlen(pseudo)),"HELO",(int)strlen(pseudo),pseudo,(int)strlen(pseudo),pseudo); //on crée l'intel CONNEXION correspondant
+  intel[16+2*strlen(pseudo)]='\0';
+  write(server, intel, 16+2*strlen(pseudo)); //on l'envoie au server
   printf("j'envoie : %s\n",intel);
   client = open(pseudo, O_RDONLY); //on ouvre son propre tube en lecture
   char* recu = malloc(12*sizeof(char)); //message recu du serveur
@@ -32,7 +33,6 @@ void createClient(){
   id = atoi(idC); //on le transforme pour récupérer l'id
   printf("Connected. ID : %d\n",id);
   free(buffer); //et on free !
-  free(pseudo);
   free(intel);
   free(recu);
   free(idC);
@@ -40,7 +40,19 @@ void createClient(){
 
 /*Fonction de déconnexion : déconnecte le client */
 void deconnexionClient(){
-  //TODO: Ecrire cette fonction
+  char* intel = malloc(13*sizeof(char)); //string pour l'intel envoyé au serveur
+  sprintf(intel,"%4d%s%4d",12,"BYEE",id); //on crée l'intel DECONNEXION
+  intel[12]='\0';
+  write(server, intel, strlen(intel)); //on l'envoie au serveur
+  char* recu = malloc(12*sizeof(char)); //message recu du serveur
+  read(client, recu, DIRECTORY_LENGTH); //on lit le tube
+  client = 0;
+  id = 0;
+  unlink(pseudo);
+  printf("A bientôt %s !\n", pseudo);
+  free(pseudo);
+  free(intel);
+  free(recu);
 }
 
 /*Fonction d'envoi de message public : envoie un message à tous les utilisateurs */
