@@ -91,7 +91,7 @@ void listUsersServer(char* buffer, int l){
 
   }
 
-/*Fonction pour forcer la déconnexion de tous les id + shutdown du serveur */
+/*Fonction pour forcer la déconnexion de tous les id + shutdown du serveur 
 void shutServer(){
   int i;
   for(i=0;i<counter-1;i++){
@@ -109,6 +109,8 @@ void shutServer(){
   //1) déconnecte tous les id (utiliser deconnexion)
   //2) supprimer le server
 }
+
+ */
 
 /*Fonction pour débugger le serveur */
 void debugServer(){

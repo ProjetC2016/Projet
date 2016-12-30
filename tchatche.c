@@ -80,10 +80,15 @@ void listUsersClient(){
 }
 
 
-/*Fonction pour forcer la déconnexion de tous les id + shutdown du serveur */
+/*Fonction pour forcer la déconnexion de tous les id + shutdown du serveur  */
 void shutClient(){
+<<<<<<< HEAD
+/*  char* intel = malloc(13*sizeof(char)); //infos envoyées au serveur
+  sprintf(intel,"%4d%s%4d",12,"SHUT",id,); //on crée l'intel CONNEXION correspondant
+=======
   char* intel = malloc(13*sizeof(char)); //infos envoyées au serveur
   sprintf(intel,"%4d%s%4d",12,"SHUT",id); //on crée l'intel CONNEXION correspondant
+>>>>>>> 7a4b15e71d2ba0dc6117fbea6bdb520f46975b7b
   intel[12]='\0';
   write(server, intel, 13); //on l'envoie au server
   printf("j'envoie : %s\n",intel);
@@ -92,7 +97,12 @@ void shutClient(){
   deconnexionClient();
   free(intel); //et on free !
   free(recu);
+<<<<<<< HEAD
+  free(idC);
+  //TODO: Ecrire cette fonction */
+=======
   //TODO: Ecrire cette fonction
+>>>>>>> 7a4b15e71d2ba0dc6117fbea6bdb520f46975b7b
 }
 
 /*Fonction pour débugger le serveur */
