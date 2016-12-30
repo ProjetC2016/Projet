@@ -19,9 +19,10 @@ void createClient(){
     mkfifo(pseudo, 0666); //je le crée
   }
   char* intel = malloc((8+2*strlen(pseudo)+1)*sizeof(char)); //infos envoyées au serveur
-  sprintf(intel,"%4d%s%s%s",8+2*strlen(pseudo),"HELO",pseudo,pseudo); //on crée l'intel CONNEXION correspondant
+  sprintf(intel,"%4d%s%s%s",8+2*(int)(strlen(pseudo)),"HELO",pseudo,pseudo); //on crée l'intel CONNEXION correspondant
   intel[8+2*strlen(pseudo)]='\0';
   write(server, intel, 8+2*strlen(pseudo)); //on l'envoie au server
+  printf("j'envoie : %s\n",intel);
   client = open(pseudo, O_RDONLY); //on ouvre son propre tube en lecture
   char* recu = malloc(12*sizeof(char)); //message recu du serveur
   char* idC = malloc(4*sizeof(char)); //String id

@@ -4,7 +4,8 @@
 
 #define DIRECTORY_LENGTH 1024
 
-int id = 1;; //id du client (augmente de 1 à chaque ajout d'un nouveau client)
+int id = 1; //id du client (augmente de 1 à chaque ajout d'un nouveau client)
+int logList[DIRECTORY_LENGTH];
 
 /* Fonction qui crée le tube du server */
 void createServer(){
@@ -15,18 +16,22 @@ void createServer(){
 
 /* Fonction de connexion : récupère l'intel de connexion et offre un id */
 void connexionServer(char* buffer, int l){
-  char* pseudo = malloc(((l-8)/2)*sizeof(char)); //string pour le pseudo
-  strncpy(pseudo,buffer+8,(l-8)/2); //on le récupère dans le buffer
-  pseudo[((l-8)/2)]='\0';
-  printf("Pseudo : %s\n",pseudo);
-  int client = open(pseudo, O_WRONLY); //on ouvre le tube client en écriture
-  char* intel = malloc(13*sizeof(char)); //string pour l'intel envoyé
-  sprintf(intel,"%4d%s%4d",12,"OKOK",id); //on crée l'intel
-  intel[12]='\0';
-  write(client, intel, strlen(intel));//on écrit l'intel dans le tube client
-  id++; //on augmente l'id pour le prochain tour
-  free(pseudo); //on free ! (on a tout compris)
-  free(intel);
+  if(logList[id-1]==0){
+    char* pseudo = malloc(((l-8)/2)*sizeof(char)); //string pour le pseudo
+    strncpy(pseudo,buffer+8,(l-8)/2); //on le récupère dans le buffer
+    pseudo[((l-8)/2)]='\0';
+    printf("Pseudo : %s\n",pseudo);
+    int client = open(pseudo, O_WRONLY); //on ouvre le tube client en écriture
+    char* intel = malloc(13*sizeof(char)); //string pour l'intel envoyé
+    sprintf(intel,"%4d%s%4d",12,"OKOK",id); //on crée l'intel
+    intel[12]='\0';
+    write(client, intel, strlen(intel));//on écrit l'intel dans le tube client
+    logList[id-1]=id-1;
+    id++; //on augmente l'id pour le prochain tour
+    free(pseudo); //on free ! (on a tout compris)
+    free(intel);
+  }
+
 }
 
 /*Fonction de déconnexion : récupère l'id et le déconnecte */
