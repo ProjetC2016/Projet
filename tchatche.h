@@ -13,7 +13,7 @@ void deconnexionClient();
 void sendPublicMessageClient(char* buffer);
 void sendPrivateMessageClient(char* buffer);
 void listUsersClient();
-void shutClient(char* buffer, int l);
+void shutClient();
 void debugClient();
 void sendFileClient(char* buffer);
 void mainClient();
