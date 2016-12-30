@@ -95,7 +95,7 @@ void listUsersServer(char* buffer, int l){
 void shutServer(){
   int i;
   for(i=0;i<id-1;i++){
-    if(pipes[i]=0){
+    if(pipes[i]==0){
       char* pseudo = pseudoList[i];
       char* intel = malloc((9+strlen(pseudo))*sizeof(char));
       sprintf(intel,"%4d%s%4d%s",8+strlen(pseudo),"SHUT",(int) strlen(pseudo),pseudo); //on crée l'intel
@@ -105,7 +105,6 @@ void shutServer(){
       free(intel);
     }
   }
-  free(pseudoList);
   //TODO: Ecrire cette fonction
   //1) déconnecte tous les id (utiliser deconnexion)
   //2) supprimer le server

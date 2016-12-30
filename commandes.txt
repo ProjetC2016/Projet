@@ -10,3 +10,5 @@ git pull origin master
 git add -A
 git commit -m "message qui explique les modifs"
 git push -u origin master
+
+si soucis : git pull --no-edit
