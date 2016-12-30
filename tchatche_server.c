@@ -68,14 +68,27 @@ void listUsersServer(char* buffer, int l){
 }
 
 /*Fonction pour forcer la déconnexion de tous les id + shutdown du serveur */
-void shutServer(char* buffer, int l){
+void shutServer(){
+  int i;
+  for(i=0;i<id-1;i++){
+    if(pipes[i]=0){
+      char* pseudo = pseudoList[i];
+      char* intel = malloc((9+strlen(pseudo))*sizeof(char));
+      sprintf(intel,"%4d%s%4d%s",8+strlen(pseudo),"SHUT",(int) strlen(pseudo),pseudo); //on crée l'intel
+      intel[8+strlen(pseudo)]='\0';
+      write(pipes[i],intel,strlen(intel));
+      free(pseudo);
+      free(intel);
+    }
+  }
+  free(pseudoList);
   //TODO: Ecrire cette fonction
   //1) déconnecte tous les id (utiliser deconnexion)
   //2) supprimer le server
 }
 
 /*Fonction pour débugger le serveur */
-void debugServer(char* buffer, int l){
+void debugServer(){
   //TODO: Ecrire cette fonction
   //EUH......
 }
@@ -122,7 +135,8 @@ void mainServer(){
         listUsersServer(buffer,l); //on execute la fonction correspondante
       }
       else if(strcmp(type,"SHUT")==0){ //si le message est une demande de shutdown total
-        shutServer(buffer,l); //on execute la fonction correspondante
+        shutServer(); //on execute la fonction correspondante
+        break;
       }
       else if(strcmp(type,"DEBG")==0){ //si le message est une demande de debug
         debugServer(buffer,l); //on execute la fonction correspondante
