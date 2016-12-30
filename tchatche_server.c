@@ -18,11 +18,10 @@ void createServer(){
 
 /* Fonction de connexion : récupère l'intel de connexion et offre un id */
 void connexionServer(char* buffer, int l){
-  if(logList[id-1]==id){}
-  else{
-    char* pseudo = malloc(((l-8)/2)*sizeof(char)); //string pour le pseudo
-    strncpy(pseudo,buffer+8,(l-8)/2); //on le récupère dans le buffer
-    pseudo[((l-8)/2)]='\0';
+  if(logList[id-1]!=id){
+    char* pseudo = malloc(((l-16)/2)*sizeof(char)); //string pour le pseudo
+    strncpy(pseudo,buffer+12,(l-16)/2); //on le récupère dans le buffer
+    pseudo[((l-16)/2)]='\0';
     printf("Pseudo : %s\n",pseudo);
     int client = open(pseudo, O_WRONLY); //on ouvre le tube client en écriture
     pipes[id-1]=client;
@@ -30,7 +29,7 @@ void connexionServer(char* buffer, int l){
     sprintf(intel,"%4d%s%4d",12,"OKOK",id); //on crée l'intel
     intel[12]='\0';
     write(client, intel, strlen(intel));//on écrit l'intel dans le tube client
-    logList[id-1]=id-1;
+    logList[id-1]=id;
     pseudoList[id-1]=pseudo;
     id++; //on augmente l'id pour le prochain tour
     free(pseudo); //on free ! (on a tout compris)
@@ -41,10 +40,20 @@ void connexionServer(char* buffer, int l){
 
 /*Fonction de déconnexion : récupère l'id et le déconnecte */
 void deconnexionServer(char* buffer, int l){
-  //TODO: Ecrire cette fonction (similaire à connexion)
-  //1) déconnecter le client (i.e) le supprimer de la liste des clients en ligne
-  //2) virer toute info relative à l'utilisateur
-  //3) nettoyer/supprimer les tubes
+  char* idC = malloc(4*sizeof(char)); //String idC envoyé par le client au serveur
+  int idClient; //int correspondant au string de l'idC
+  strncpy(idC,buffer+8,4); //on le récupère dans le buffer
+  idClient = atoi(idC); //on le transforme pour récupérer l'id
+  char* intel = malloc(13*sizeof(char)); //string pour l'intel envoyé
+  sprintf(intel,"%4d%s%4d",12,"BYEE",id); //on crée l'intel
+  intel[12]='\0';
+  int client = pipes[idClient-1];
+  write(client, intel, strlen(intel));//on écrit l'intel dans le tube client
+  logList[idClient-1] = 0;
+  pseudoList[idClient-1] = NULL;
+  pipes[idClient-1] = 0;
+  free(idC);
+  free(intel);
 }
 
 /*Fonction d'envoi de message public : récupère le message et le transmet */
