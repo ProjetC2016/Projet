@@ -75,9 +75,21 @@ void sendPrivateMessageServer(char* buffer, int l){
 
 /*Fonction pour obtenir la liste des utilisateurs */
 void listUsersServer(char* buffer, int l){
-  //TODO: Ecrire cette fonction
-  //liste un par un les utilisateurs
-}
+    char* intel = malloc((12+(int)strlen(pseudoList[0]))*sizeof(char)); //string pour l'intel envoyé
+    //on recupere l'id de celui qui a demandé la liste :
+    char* id = malloc(4*sizeof(char));    
+    strncpy(id, buffer+8, 4);
+   /* int index=0;
+    while (pseudoList[index]){
+      sprintf(intel,"%4d%s%4d",12,"OKOK",id); //on crée l'intel
+      index++;
+    } */
+    printf("###### %s ### \n",pseudoList[0]);
+    sprintf(intel,"%4d%s%4d%s",(12+(int)strlen(pseudoList[0])),"LIST",nbUsers,pseudoList[0]); //on crée l'intel
+    write(atoi(id),intel,strlen(intel));
+    printf ("-------------INTEL DU SERV %s \n ", intel);
+
+  }
 
 /*Fonction pour forcer la déconnexion de tous les id + shutdown du serveur */
 void shutServer(){
