@@ -73,20 +73,15 @@ void listUsersClient(){
 /*Fonction pour forcer la déconnexion de tous les id + shutdown du serveur */
 void shutClient(){
   char* intel = malloc(13*sizeof(char)); //infos envoyées au serveur
-  sprintf(intel,"%4d%s%4d",12,"SHUT",id,); //on crée l'intel CONNEXION correspondant
+  sprintf(intel,"%4d%s%4d",12,"SHUT",id); //on crée l'intel CONNEXION correspondant
   intel[12]='\0';
   write(server, intel, 13); //on l'envoie au server
   printf("j'envoie : %s\n",intel);
-  char* recu = malloc(8+strlen()*sizeof(char)); //message recu du serveur
+  char* recu = malloc((8+strlen(pseudo))*sizeof(char)); //message recu du serveur
   read(client, recu, DIRECTORY_LENGTH); //on lit la tube
-  strncpy(idC,recu+8,4); //on le stocke dans idC
-  id = atoi(idC); //on le transforme pour récupérer l'id
-  printf("Connected. ID : %d\n",id);
-  free(buffer); //et on free !
-  free(pseudo);
-  free(intel);
+  deconnexionClient();
+  free(intel); //et on free !
   free(recu);
-  free(idC);
   //TODO: Ecrire cette fonction
 }
 
