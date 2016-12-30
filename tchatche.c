@@ -67,8 +67,18 @@ void sendPrivateMessageClient(char* buffer){
 
 /*Fonction pour obtenir la liste des utilisateurs */
 void listUsersClient(){
-  //TODO: Ecrire cette fonction
+  char* intel = malloc(13*sizeof(char)); //string pour l'intel envoyé
+  char* buffer = malloc(13*sizeof(char)); 
+  sprintf(intel,"%4d%s%4d",12,"LIST",id); //on crée l'intel
+  write(server, intel, strlen(intel));//on écrit l'intel dans le tube client
+  read(server,buffer,strlen(buffer));
+  printf ("-------------INTEL DU CLIENT %s \n ", intel);
+
+  //TODO : le faire autant de fois qu'il y a de pseudos
+
+  printf("%s",buffer);
 }
+
 
 /*Fonction pour forcer la déconnexion de tous les id + shutdown du serveur */
 void shutClient(){

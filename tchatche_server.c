@@ -4,7 +4,8 @@
 
 #define DIRECTORY_LENGTH 1024
 
-int id = 1; //id du client (augmente de 1 à chaque ajout d'un nouveau client)
+int counter = 1; //id possible pour un client (augmente de 1 à chaque ajout d'un nouveau client)
+int nbUsers = 0;
 int logList[DIRECTORY_LENGTH];
 char* pseudoList[DIRECTORY_LENGTH];
 int pipes[DIRECTORY_LENGTH];
@@ -18,20 +19,21 @@ void createServer(){
 
 /* Fonction de connexion : récupère l'intel de connexion et offre un id */
 void connexionServer(char* buffer, int l){
-  if(logList[id-1]!=id){
+  if(logList[counter-1]!=counter){
     char* pseudo = malloc(((l-16)/2)*sizeof(char)); //string pour le pseudo
     strncpy(pseudo,buffer+12,(l-16)/2); //on le récupère dans le buffer
     pseudo[((l-16)/2)]='\0';
     printf("Pseudo : %s\n",pseudo);
     int client = open(pseudo, O_WRONLY); //on ouvre le tube client en écriture
-    pipes[id-1]=client;
+    pipes[counter-1]=client;
     char* intel = malloc(13*sizeof(char)); //string pour l'intel envoyé
-    sprintf(intel,"%4d%s%4d",12,"OKOK",id); //on crée l'intel
+    sprintf(intel,"%4d%s%4d",12,"OKOK",counter); //on crée l'intel
     intel[12]='\0';
     write(client, intel, strlen(intel));//on écrit l'intel dans le tube client
-    logList[id-1]=id;
-    pseudoList[id-1]=pseudo;
-    id++; //on augmente l'id pour le prochain tour
+    logList[counter-1]=counter;
+    pseudoList[counter-1]=pseudo;
+    counter++; //on augmente le counter pour le prochain tour
+    nbUsers++; //on augmente le nombre d'utilisateurs
     free(pseudo); //on free ! (on a tout compris)
     free(intel);
   }
@@ -45,13 +47,14 @@ void deconnexionServer(char* buffer, int l){
   strncpy(idC,buffer+8,4); //on le récupère dans le buffer
   idClient = atoi(idC); //on le transforme pour récupérer l'id
   char* intel = malloc(13*sizeof(char)); //string pour l'intel envoyé
-  sprintf(intel,"%4d%s%4d",12,"BYEE",id); //on crée l'intel
+  sprintf(intel,"%4d%s%4d",12,"BYEE",idClient); //on crée l'intel
   intel[12]='\0';
   int client = pipes[idClient-1];
   write(client, intel, strlen(intel));//on écrit l'intel dans le tube client
   logList[idClient-1] = 0;
   pseudoList[idClient-1] = NULL;
   pipes[idClient-1] = 0;
+  nbUsers--; //on diminue le nombre d'utilisateurs
   free(idC);
   free(intel);
 }
@@ -72,9 +75,21 @@ void sendPrivateMessageServer(char* buffer, int l){
 
 /*Fonction pour obtenir la liste des utilisateurs */
 void listUsersServer(char* buffer, int l){
-  //TODO: Ecrire cette fonction
-  //liste un par un les utilisateurs
-}
+    char* intel = malloc((12+(int)strlen(pseudoList[0]))*sizeof(char)); //string pour l'intel envoyé
+    //on recupere l'id de celui qui a demandé la liste :
+    char* id = malloc(4*sizeof(char));    
+    strncpy(id, buffer+8, 4);
+   /* int index=0;
+    while (pseudoList[index]){
+      sprintf(intel,"%4d%s%4d",12,"OKOK",id); //on crée l'intel
+      index++;
+    } */
+    printf("###### %s ### \n",pseudoList[0]);
+    sprintf(intel,"%4d%s%4d%s",(12+(int)strlen(pseudoList[0])),"LIST",nbUsers,pseudoList[0]); //on crée l'intel
+    write(atoi(id),intel,strlen(intel));
+    printf ("-------------INTEL DU SERV %s \n ", intel);
+
+  }
 
 /*Fonction pour forcer la déconnexion de tous les id + shutdown du serveur */
 void shutServer(){
