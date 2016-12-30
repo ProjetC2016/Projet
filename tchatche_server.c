@@ -7,6 +7,7 @@
 int id = 1; //id du client (augmente de 1 à chaque ajout d'un nouveau client)
 int logList[DIRECTORY_LENGTH];
 char* pseudoList[DIRECTORY_LENGTH];
+int pipes[DIRECTORY_LENGTH];
 
 /* Fonction qui crée le tube du server */
 void createServer(){
@@ -24,6 +25,7 @@ void connexionServer(char* buffer, int l){
     pseudo[((l-8)/2)]='\0';
     printf("Pseudo : %s\n",pseudo);
     int client = open(pseudo, O_WRONLY); //on ouvre le tube client en écriture
+    pipes[id-1]=client;
     char* intel = malloc(13*sizeof(char)); //string pour l'intel envoyé
     sprintf(intel,"%4d%s%4d",12,"OKOK",id); //on crée l'intel
     intel[12]='\0';

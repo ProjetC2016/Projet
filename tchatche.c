@@ -6,9 +6,10 @@
 
 int client = 0;
 int id = 0;
+int server;
 
 void createClient(){
-  int server = open("serverPipe", O_WRONLY); //on ouvre le tube server en écriture
+  server = open("serverPipe", O_WRONLY); //on ouvre le tube server en écriture
   char *buffer = malloc(DIRECTORY_LENGTH*sizeof(char));
   char *pseudo = malloc(DIRECTORY_LENGTH*sizeof(char));
   printf("Pseudo> ");
@@ -38,41 +39,77 @@ void createClient(){
 }
 
 /*Fonction de déconnexion : déconnecte le client */
-void deconnexionClient(char* buffer, int l){
+void deconnexionClient(){
   //TODO: Ecrire cette fonction
 }
 
 /*Fonction d'envoi de message public : envoie un message à tous les utilisateurs */
-void sendPublicMessageClient(char* buffer, int l){
+void sendPublicMessageClient(char* buffer){
   //TODO: Ecrire cette fonction
 }
 
 /*Fonction d'envoi de message privé : envoie un message à un seul utilisateur */
-void sendPrivateMessageClient(char* buffer, int l){
+void sendPrivateMessageClient(char* buffer){
   //TODO: Ecrire cette fonction
 }
 
 /*Fonction pour obtenir la liste des utilisateurs */
-void listUsersClient(char* buffer, int l){
+void listUsersClient(){
   //TODO: Ecrire cette fonction
 }
 
 /*Fonction pour forcer la déconnexion de tous les id + shutdown du serveur */
-void shutClient(char* buffer, int l){
+void shutClient(){
   //TODO: Ecrire cette fonction
 }
 
 /*Fonction pour débugger le serveur */
-void debugClient(char* buffer, int l){
+void debugClient(){
   //TODO: Ecrire cette fonction
 }
 
 /*Fonction pour envoyer un fichier */
-void sendFileClient(char* buffer, int l){
+void sendFileClient(char* buffer){
   //TODO: Ecrire cette fonction
 }
 
 void mainClient(){
+  char *buffer = malloc(DIRECTORY_LENGTH*sizeof(char));
+  char *envoi = malloc(DIRECTORY_LENGTH*sizeof(char));
+  printf("> ");
+  fgets(buffer, DIRECTORY_LENGTH, stdin); //on récupère l'envoi
+  strncpy(envoi,buffer,strlen(buffer)-1); //on le stocke dans la variable correspondante
+  char* private = malloc(11*sizeof(char));
+  memcpy(private,&envoi[0],11);
+  char* users = malloc(6*sizeof(char));
+  memcpy(users,&envoi[0],6);
+  char* shut = malloc(5*sizeof(char));
+  memcpy(shut,&envoi[0],5);
+  char* debug = malloc(6*sizeof(char));
+  memcpy(debug,&envoi[0],6);
+  char* send = malloc(10*sizeof(char));
+  memcpy(send,&envoi[0],10);
+  if(strcmp("!quit",envoi)==0){
+    deconnexionClient();
+  }
+  else if(strcmp(private,"!private to")==0){
+    sendPrivateMessageClient(envoi);
+  }
+  else if(strcmp(users,"!users")==0){
+    listUsersClient();
+  }
+  else if(strcmp(shut,"!shut")==0){
+    shutClient();
+  }
+  else if(strcmp(debug,"!debug")==0){
+    debugClient();
+  }
+  else if(strcmp(send,"!send file")==0){
+    sendFileClient(envoi);
+  }
+  else{
+    sendPublicMessageClient(envoi);
+  }
   //TODO: pour gérer l'envoi des messages/fichiers.
   //Fonction similaire à mainServer mais en plus simple ! (il y a un mode d'attente par défault)
 }
