@@ -94,7 +94,7 @@ void listUsersServer(char* buffer, int l){
 /*Fonction pour forcer la déconnexion de tous les id + shutdown du serveur */
 void shutServer(){
   int i;
-  for(i=0;i<id-1;i++){
+  for(i=0;i<counter-1;i++){
     if(pipes[i]==0){
       char* pseudo = pseudoList[i];
       char* intel = malloc((9+strlen(pseudo))*sizeof(char));
