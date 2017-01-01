@@ -18,6 +18,14 @@ void createServer(){
   }
 }
 
+void test(){
+  printf("Liste des pseudos : ");
+  int i;
+  for (i=0;i<10; i++){
+    printf("%s   - ", pseudoList[i]);
+  }
+}
+
 /* Fonction de connexion : récupère l'intel de connexion et offre un id */
 void connexionServer(char* buffer, int l){
   if(logList[counter-1]!=counter){
@@ -38,8 +46,8 @@ void connexionServer(char* buffer, int l){
     nbUsers++; //on augmente le nombre d'utilisateurs
     free(pseudo); //on free ! (on a tout compris)
     free(intel);
+    //test();
   }
-
 }
 
 /*Fonction de déconnexion : récupère l'id et le déconnecte */
@@ -77,21 +85,21 @@ void sendPrivateMessageServer(char* buffer, int l){
 
 /*Fonction pour obtenir la liste des utilisateurs */
 void listUsersServer(char* buffer, int l){
-    char* intel = malloc((12+(int)strlen(pseudoList[0]))*sizeof(char)); //string pour l'intel envoyé
-    //on recupere l'id de celui qui a demandé la liste :
-    char* id = malloc(4*sizeof(char));
-    strncpy(id, buffer+8, 4);
-   /* int index=0;
-    while (pseudoList[index]){
-      sprintf(intel,"%4d%s%4d",12,"OKOK",id); //on crée l'intel
-      index++;
-    } */
-    printf("###### %s ### \n",pseudoList[0]);
-    sprintf(intel,"%4d%s%4d%s",(12+(int)strlen(pseudoList[0])),"LIST",nbUsers,pseudoList[0]); //on crée l'intel
-    write(atoi(id),intel,strlen(intel));
+  //on recupere l'id de celui qui a demandé la liste :
+  char* id = malloc(4*sizeof(char));    
+  strncpy(id, buffer+8, 4);
+  int index=0;
+  while (pseudoList[index]){
+    char* intel = malloc((1014+12+(int)strlen(pseudoList[0]))*sizeof(char)); //string pour l'intel envoyé
+    sprintf(intel,"%4d%s%4d%s",(12+(int)strlen(pseudoList[index])),"LIST",nbUsers,pseudoList[index]); //on crée l'intel
+    int idClient = atoi(id);
+    int client = pipes[idClient-1];
+    printf("voici l'id : %d \n ", client); 
+    write(client,intel,strlen(intel));
+    index++;
     printf ("-------------INTEL DU SERV %s \n ", intel);
-
-  }
+  } 
+}
 
 /* Fonction pour forcer la déconnexion de tous les id + shutdown du serveur */
 void shutServer(){
