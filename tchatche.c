@@ -66,15 +66,29 @@ void deconnexionClient(){
 /*Fonction d'envoi de message public : envoie un message à tous les utilisateurs */
 void sendPublicMessageClient(char* buffer){
   //TODO: Finir cette fonction
+  printf("!!!!! buffer %s\n", buffer);
   char* intel = malloc(16+strlen(buffer)*sizeof(char)); //string pour l'intel envoyé au serveur
   sprintf(intel,"%4d%s%4d%4d%s",16+(int)strlen(buffer),"BCST",id,(int)strlen(buffer),buffer); //on crée l'intel MESSAGE PUBLIC
   intel[16+strlen(buffer)] = '\0';
+  printf("!!!!! Intel %s\n", intel);
   write(server,intel,strlen(intel));
-  char* recu = malloc(16+(strlen(buffer)+strlen(pseudo))*sizeof(char)); //message recu du serveur
-  read(client, recu, DIRECTORY_LENGTH); //on lit le tube
-  printf("[%s] %s\n", pseudo, recu);
   free(intel);
-  free(recu);
+}
+
+void readMessage(char* recu){
+  char* psdSize = malloc(4*sizeof(char));
+  int pseudoSize = atoi(strncpy(psdSize, recu+8, 4)); //on récupère la taille du pseudo du sender
+  char* sender = malloc(pseudoSize*sizeof(char));
+  strncpy(sender, recu+12, pseudoSize); //on récupère le pseudo du sender
+  char* msgSize = malloc(4*sizeof(char));
+  int messageSize = atoi(strncpy(msgSize, recu+12+pseudoSize, 4)); //on récupère la taille du message
+  char* message = malloc(messageSize*sizeof(char));
+  strncpy(message, recu+16+pseudoSize, messageSize); //on récupère le message
+  printf("[%s] %s\n", sender, message);
+  free(psdSize);
+  free(sender);
+  free(msgSize);
+  free(message);
 }
 
 /*Fonction d'envoi de message privé : envoie un message à un seul utilisateur */
@@ -85,7 +99,7 @@ void sendPrivateMessageClient(char* buffer){
 /*Fonction pour obtenir la liste des utilisateurs */
 void listUsersClient(){
   char* intel = malloc(13*sizeof(char)); //string pour l'intel envoyé
-  char* buffer = malloc(1024*sizeof(char)); 
+  char* buffer = malloc(1024*sizeof(char));
   sprintf(intel,"%4d%s%4d",12,"LIST",id); //on crée l'intel
   write(server, intel, strlen(intel));//on écrit l'intel dans le tube client
   printf(" !!!! %d \n", client);
@@ -133,100 +147,105 @@ void mainClient(){
   char* send = malloc(10*sizeof(char));
   char* type = malloc(5*sizeof(char));
   while(1){
+    sleep(1);
     FD_ZERO(&readers);
     FD_SET(0,&readers);
     FD_SET(client,&readers);
     int n = select(MAX(0,client) + 1,&readers,NULL, NULL, NULL);
     if(n>0){
       if(FD_ISSET(client, &readers)){
-	printf("Je capte qqch dans le tube !\n");
-	l = read(client,buffer, DIRECTORY_LENGTH);
-	memcpy(type,&buffer[4],4);
-	type[4]='\0';
-	buffer[l]='\0';
-	switch (l) {
-	case 0 | 1:
-	  printf("Aie, chaine vide\n");
-	  break;
-	case -1:
-	  perror("Mauvaise lecture stdin\n");
-	  break;
-	default:
-	  printf("Buffer recu : %s de type %s\n",buffer,type);
-	  if(strcmp("SHUT",type)==0){
-	    free(buffer);
-	    free(envoi);
-	    free(private);
-	    free(users);
-	    free(shut);
-	    free(debug);
-	    free(send);
-	    free(type);
-	    deconnexionClient();
-	    exit(0);
-	  }
-	  break;
-	}
+      	l = read(client,buffer, DIRECTORY_LENGTH);
+        printf("Je capte qqch dans le tube ! %d\n",l);
+      	memcpy(type,&buffer[4],4);
+      	type[4]='\0';
+      	buffer[l]='\0';
+      	switch (l) {
+        	case 0 | 1:
+        	  printf("Aie, chaine vide\n");
+        	  break;
+        	case -1:
+        	  perror("Mauvaise lecture stdin\n");
+        	  break;
+        	default:
+        	  printf("Buffer recu : %s de type %s\n",buffer,type);
+        	  if(strcmp("SHUT",type)==0){
+        	    free(buffer);
+        	    free(envoi);
+        	    free(private);
+        	    free(users);
+        	    free(shut);
+        	    free(debug);
+        	    free(send);
+        	    free(type);
+        	    deconnexionClient();
+        	    exit(0);
+        	  }
+            else if(strcmp("BCST",type)==0){
+              readMessage(buffer);
+            }
+        	  break;
+        	}
       }
       if(FD_ISSET(0, &readers)){
-	printf("Je capte qqch sur stdin !\n");
-	fgets(buffer,DIRECTORY_LENGTH,stdin);
-	l = strlen(buffer);
-	buffer[l-1]='\0';
-	switch (l) {
-	case 0 | 1:
-	  printf("Aie, chaine vide\n");
-	  break;
-	case -1:
-	  perror("Mauvaise lecture stdin\n");
-	  break;
-	default:
-	  memcpy(private,&buffer[0],11);
-	  memcpy(users,&buffer[0],6);
-	  memcpy(shut,&buffer[0],5);
-	  memcpy(debug,&buffer[0],6);
-	  memcpy(send,&buffer[0],10);
-	  if(strcmp("!quit",buffer)==0){
-	    deconnexionClient();
-	    free(buffer);
-	    free(envoi);
-	    free(private);
-	    free(users);
-	    free(shut);
-	    free(debug);
-	    free(send);
-	    free(type);
-	    exit(0);
-	  }
-	  else if(strcmp(private,"!private to")==0){
-	    sendPrivateMessageClient(envoi);
-	  }
-	  else if(strcmp(users,"!users")==0){
-	    listUsersClient();
-	  }
-	  else if(strcmp(shut,"!shut")==0){
-	    printf("Blackout !\n");
-	    free(buffer);
-	    free(envoi);
-	    free(private);
-	    free(users);
-	    free(shut);
-	    free(debug);
-	    free(send);
-	    free(type);
-	    shutClient();
-	  }
-	  else if(strcmp(debug,"!debug")==0){
-	    debugClient();
-	  }
-	  else if(strcmp(send,"!send file")==0){
-	    sendFileClient(envoi);
-	  }
-	  else{
-	    sendPublicMessageClient(envoi);
-	  }
-	  break;
-	}
+      	printf("Je capte qqch sur stdin !\n");
+      	fgets(buffer,DIRECTORY_LENGTH,stdin);
+      	l = strlen(buffer)-1;
+      	buffer[l]='\0';
+      	printf("Buffer : %s de longueur %d\n",buffer,l);
+      	switch (l) {
+      	case 0 | 1:
+      	  printf("Aie, chaine vide\n");
+      	  break;
+      	case -1:
+      	  perror("Mauvaise lecture stdin\n");
+      	  break;
+      	default:
+      	  memcpy(private,&buffer[0],11);
+      	  memcpy(users,&buffer[0],6);
+      	  memcpy(shut,&buffer[0],5);
+      	  memcpy(debug,&buffer[0],6);
+      	  memcpy(send,&buffer[0],10);
+      	  if(strcmp("!quit",buffer)==0){
+      	    deconnexionClient();
+      	    free(buffer);
+      	    free(envoi);
+      	    free(private);
+      	    free(users);
+      	    free(shut);
+      	    free(debug);
+      	    free(send);
+      	    free(type);
+      	    exit(0);
+      	  }
+      	  else if(strcmp(private,"!private to")==0){
+      	    sendPrivateMessageClient(buffer);
+      	  }
+      	  else if(strcmp(users,"!users")==0){
+      	    listUsersClient();
+      	  }
+      	  else if(strcmp(shut,"!shut")==0){
+      	    printf("Blackout !\n");
+      	    free(buffer);
+      	    free(envoi);
+      	    free(private);
+      	    free(users);
+      	    free(shut);
+      	    free(debug);
+      	    free(send);
+      	    free(type);
+      	    shutClient();
+      	  }
+      	  else if(strcmp(debug,"!debug")==0){
+      	    debugClient();
+      	  }
+      	  else if(strcmp(send,"!send file")==0){
+      	    sendFileClient(envoi);
+      	  }
+      	  else{
+      	    sendPublicMessageClient(buffer);
+      	  }
+      	  break;
+      	}
       }
     }
   }

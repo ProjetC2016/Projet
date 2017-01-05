@@ -71,9 +71,34 @@ void deconnexionServer(char* buffer, int l){
 
 /*Fonction d'envoi de message public : récupère le message et le transmet */
 void sendPublicMessageServer(char* buffer, int l){
+  printf("DEBUT\n");
   //TODO: Ecrire cette fonction
   //1) recevoir le message
   //2) le transmettre à tous les clients de la liste
+  char* idC = malloc(4*sizeof(char)); //String idC envoyé par le client au serveur
+  strncpy(idC,buffer+8,4); //on le récupère dans le buffer
+  int idClient = atoi(idC); //on le transforme pour récupérer l'id
+  char* sender = pseudoList[idClient-1]; //On récupère le pseudo de celui qui envoie le message
+  printf("#### sender de taille %d : %s ####\n", strlen(sender),sender);
+  char* msgSize = malloc(4*sizeof(char)); //String correspondant à la taille du message
+  strncpy(msgSize, buffer+12, 4);
+  int messageSize = atoi(msgSize);
+  char* message = malloc(messageSize*sizeof(char));
+  strncpy(message, buffer+16, messageSize);
+  char* intel = malloc((17+strlen(sender)+messageSize)*sizeof(char));
+  sprintf(intel,"%4d%s%4d%s%4d%s", 16+(int)strlen(sender)+messageSize, "BCST", (int)strlen(sender), sender, messageSize, message);
+  intel[16+(int)strlen(sender)+messageSize]='\0';
+  int i;
+  for(i=0;i<counter;i++){
+    if(pipes[i]!=0){
+      write(pipes[i], intel, strlen(intel)); //On écrit l'intel dans tous les tubes clients
+    }
+  }
+  free(idC);
+  free(msgSize);
+  free(message);
+  free(intel);
+  printf("FIN\n");
 }
 
 /*Fonction d'envoi de message privé : récupère le message et le transmet */
@@ -86,7 +111,7 @@ void sendPrivateMessageServer(char* buffer, int l){
 /*Fonction pour obtenir la liste des utilisateurs */
 void listUsersServer(char* buffer, int l){
   //on recupere l'id de celui qui a demandé la liste :
-  char* id = malloc(4*sizeof(char));    
+  char* id = malloc(4*sizeof(char));
   strncpy(id, buffer+8, 4);
   int index=0;
   while (pseudoList[index]){
@@ -94,11 +119,11 @@ void listUsersServer(char* buffer, int l){
     sprintf(intel,"%4d%s%4d%s",(12+(int)strlen(pseudoList[index])),"LIST",nbUsers,pseudoList[index]); //on crée l'intel
     int idClient = atoi(id);
     int client = pipes[idClient-1];
-    printf("voici l'id : %d \n ", client); 
+    printf("voici l'id : %d \n ", client);
     write(client,intel,strlen(intel));
     index++;
     printf ("-------------INTEL DU SERV %s \n ", intel);
-  } 
+  }
 }
 
 /* Fonction pour forcer la déconnexion de tous les id + shutdown du serveur */
@@ -109,7 +134,7 @@ void shutServer(){
   for(i=0;i<counter;i++){
     if(pipes[i]!=0){
       strcpy(pseudo,pseudoList[i]);
-      sprintf(intel,"%4d%s%4d%s",12+strlen(pseudo),"SHUT",(int) strlen(pseudo),pseudo); //on crée l'intel
+      sprintf(intel,"%4d%s%4d%s",12+(int)strlen(pseudo),"SHUT",(int) strlen(pseudo),pseudo); //on crée l'intel
       intel[12+strlen(pseudo)]='\0';
       write(pipes[i],intel,strlen(intel));
     }
@@ -162,6 +187,7 @@ void mainServer(){
         deconnexionServer(buffer,l); //on execute la fonction correspondante
       }
       else if(strcmp(type,"BCST")==0){ //si le message est une demande d'envoi de message public
+        printf("Je lance SendMessage !\n");
         sendPublicMessageServer(buffer,l); //on execute la fonction correspondante
       }
       else if(strcmp(type,"PRVT")==0){ //si le message est une demande d'envoi de message privé
