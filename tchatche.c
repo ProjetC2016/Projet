@@ -155,7 +155,7 @@ void mainClient(){
     if(n>0){
       if(FD_ISSET(client, &readers)){
       	l = read(client,buffer, DIRECTORY_LENGTH);
-        printf("Je capte qqch dans le tube ! %d\n",l);
+        printf("Je capte qqch dans le tube ! %lu\n",l);
       	memcpy(type,&buffer[4],4);
       	type[4]='\0';
       	buffer[l]='\0';
@@ -191,7 +191,7 @@ void mainClient(){
       	fgets(buffer,DIRECTORY_LENGTH,stdin);
       	l = strlen(buffer)-1;
       	buffer[l]='\0';
-      	printf("Buffer : %s de longueur %d\n",buffer,l);
+      	printf("Buffer : %s de longueur %lu\n",buffer,l);
       	switch (l) {
       	case 0 | 1:
       	  printf("Aie, chaine vide\n");
