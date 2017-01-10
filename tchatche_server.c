@@ -6,10 +6,12 @@
 
 int counter = 1; //id possible pour un client (augmente de 1 à chaque ajout d'un nouveau client)
 int nbUsers = 0;
+int idTransfert = 0;
 int logList[DIRECTORY_LENGTH];
 char* pseudoList[DIRECTORY_LENGTH];
 int pipes[DIRECTORY_LENGTH];
 int shutdown = 0;
+int server;
 
 /* Fonction qui crée le tube du server */
 void createServer(){
@@ -184,9 +186,10 @@ void shutServer(){
       sprintf(intel,"%4d%s%4d%s",12+(int)strlen(pseudo),"SHUT",(int) strlen(pseudo),pseudo); //on crée l'intel
       intel[12+strlen(pseudo)]='\0';
       write(pipes[i],intel,strlen(intel));
+      printf("J'écris !\n");
+      sleep(1);
     }
   }
-  unlink("serverPipe");
     
   free(intel);
   free(pseudo);
@@ -201,21 +204,75 @@ void debugServer(){
 
   /*Fonction pour envoyer un fichier */
   void sendFileServer(char* buffer, int l){
+    printf("Super ! un fichier !\n");
+    char* strlenDC = malloc(DIRECTORY_LENGTH*sizeof(char));
+    int strlenD;
+    strncpy(strlenDC,buffer+16,4);
+    strlenD=atoi(strlenDC);
+    char* destinataire = malloc(DIRECTORY_LENGTH*sizeof(char));
+    strncpy(destinataire,buffer+20,strlenD);
+    destinataire[(int) strlen(destinataire)]='\0';
+    char* idSourceC = malloc(DIRECTORY_LENGTH*sizeof(char));
+    strncpy(idSourceC,buffer+12,4);
+    int idSource = atoi(idSourceC);
+    char* longueurFC = malloc(8*sizeof(char));
+    strncpy(longueurFC,buffer+20+strlenD,8);
+    int longueurF = atoi(longueurFC);
+    char* name = malloc(DIRECTORY_LENGTH*sizeof(char));
+    strncpy(name,buffer+20+strlenD+8,strlen(buffer)-20-strlenD-8);
+    char* intel = malloc(DIRECTORY_LENGTH*sizeof(char)); //infos envoyées au serveur
+    sprintf(intel,"%4d%s%4d%4d%8d%4d%s",l,"FILE",0,idTransfert,longueurF,(int)strlen(name),name); //on crée l'intel CONNEXION correspondant
+    idTransfert++;
+    int idReceiver=-1;
+    int j;
+    for(j=0; j<nbUsers; j++){
+      if(strcmp(pseudoList[j],destinataire)==0){
+	idReceiver = j;
+      }
+    }
+    if(idReceiver!=-1){
+      write(pipes[idReceiver], intel, strlen(intel)); //On écrit l'intel dans le tube de celui qui recoit
+      char* okok = malloc(13*sizeof(char)); //string pour l'intelOk envoyé
+      sprintf(okok,"%4d%s%4d",12,"OKOK",idTransfert); //on crée l'intelOk
+      okok[12]='\0';
+      write(pipes[idSource-1], okok, strlen(okok)); //on informe le client que le message privé a été envoyé
+      free(okok);
+    }
+    else{
+      char* intelBad = malloc(17*sizeof(char)); //string pour l'intelBad envoyé
+      sprintf(intelBad,"%4d%s",8,"BADD"); //on crée l'intelBad
+      intelBad[8]='\0';
+      write(pipes[idSource-1], intelBad, strlen(intelBad));
+      free(intelBad);
+    }
+    //Réception et transfert
+    int nbMessages = longueurF/256 +1;
+    int i;
+    char* datas = malloc(DIRECTORY_LENGTH*sizeof(char));
+    for(i=0;i<nbMessages;i++){
+      read(server, datas, 256);
+      datas[strlen(datas)]='\0';
+      write(pipes[idReceiver], datas, 256); //on l'envoie au server
+    }
+    
+    
     //TODO: Ecrire cette fonction
     //Complexe ! A faire en dernier
   }
 
   void mainServer(){
-    int server = open("serverPipe", O_RDONLY); //ouverture du tube server en lecture
+    server = open("serverPipe", O_RDONLY); //ouverture du tube server en lecture
     char *buffer = malloc(DIRECTORY_LENGTH*sizeof(char)); //buffer
     char *type = malloc(5*sizeof(char));  //string pour le type des messages
     char* lC = malloc(5*sizeof(char)); //longueur de l'intel
     while(1){
-      int c = read(server, buffer, DIRECTORY_LENGTH); //on lit dans le tube server
+      printf("J'attends %d\n",nbUsers);
       if(nbUsers==0 && shutdown==1){
+	unlink("serverPipe");
 	printf("Il est mort Jim !\n");
 	break;
       }
+      int c = read(server, buffer, DIRECTORY_LENGTH); //on lit dans le tube server
       if(c!=0){
 	strncpy(lC,buffer,4); //on la stocke
 	int l = atoi(lC); //on la transforme
@@ -232,7 +289,10 @@ void debugServer(){
 	}
 	//A compléter
 	else if(strcmp(type,"BYEE")==0){ //si le message est une demande de déconnexion
-	  deconnexionServer(buffer,l); //on execute la fonction correspondante
+	  int i = 0;
+	  for(i=0;i<((int) strlen(buffer))/l;i++){
+	    deconnexionServer(buffer+12*i,l); //on execute la fonction correspondante
+	  }
 	}
 	else if(strcmp(type,"BCST")==0){ //si le message est une demande d'envoi de message public
 	  printf("Je lance SendMessage !\n");

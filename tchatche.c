@@ -61,6 +61,7 @@ void deconnexionClient(){
   free(recu);
   free(standin);
   printf("Déconnexion OK\n");
+  exit(0);
 }
 
 /*Fonction d'envoi de message public : envoie un message à tous les utilisateurs */
@@ -168,11 +169,11 @@ void shutClient(){
   write(server, intel, 13); //on l'envoie au server
   printf("j'envoie : %s\n",intel);
   char* recu = malloc((8+strlen(pseudo))*sizeof(char)); //message recu du serveur
-  read(client, recu, DIRECTORY_LENGTH); //on lit le tube
-  deconnexionClient();
+  //read(client, recu, DIRECTORY_LENGTH); //on lit le tube
+  //deconnexionClient();
   free(intel); //et on free !
   free(recu);
-  exit(0);
+  //exit(0);
 }
 
 /*Fonction pour débugger le serveur */
@@ -182,13 +183,58 @@ void debugClient(){
 
 /*Fonction pour envoyer un fichier */
 void sendFileClient(char* buffer){
+  printf("Je lance sendFile\n");
+  char* name = malloc(DIRECTORY_LENGTH*sizeof(char));
+  char* send = malloc(5*sizeof(char));
+  char* file = malloc(5*sizeof(char));
+  char* to = malloc(2*sizeof(char));
+  char* destinataire = malloc(DIRECTORY_LENGTH*sizeof(char));
+  sscanf(buffer, "%s %s %s %s %s",send,file,name,to,destinataire);
+  //strncpy(name, buffer+24+strlen(pseudo),strlen(buffer)-24-strlen(pseudo));
+  name[(int)strlen(name)]='\0';
+  destinataire[(int)strlen(destinataire)]='\0';
+  struct stat buffer2;
+  stat(name,&buffer2);
+  int longueurF = buffer2.st_size;
+  if(longueurF>=0){
+    char* intel = malloc(DIRECTORY_LENGTH*sizeof(char)); //infos envoyées au serveur
+    sprintf(intel,"%4d%s%4d%4d%4d%s%8d%4d%s",24+(int)strlen(pseudo)+3,"FILE",0,id,(int) strlen(destinataire),destinataire,longueurF,strlen(name),name); //on crée l'intel CONNEXION correspondant
+    intel[(int) strlen(intel)]='\0';
+    write(server, intel, strlen(intel)); //on l'envoie au server
+    char* answer = malloc(DIRECTORY_LENGTH*sizeof(char)); //infos recues du serveur
+    read(client,answer, DIRECTORY_LENGTH);
+    char* type = malloc(5*sizeof(char));
+    strncpy(type,answer+4,4);
+    type[4]='\0';
+    if(strcmp(type,"OKOK")==0){
+      char* idTransfertC = malloc(4*sizeof(char));
+      int idTransfert;
+      strncpy(idTransfertC,buffer+8,4);
+      idTransfert = atoi(idTransfertC);
+      int nbMessages = longueurF/256 + 1;
+      int i;
+      FILE* fichier = fopen(name,"r");
+      char* parcours = malloc(257*sizeof(char));
+      char* datas = malloc(DIRECTORY_LENGTH*sizeof(char));
+      for(i=0;i<nbMessages;i++){
+	fread(parcours,sizeof(char),256,fichier);
+        parcours[(int) strlen(parcours)]='\0';
+	sprintf(datas,"%4d%s%4d%4d%4d%s",20+strlen(parcours),"FIOK",i+1,idTransfert,strlen(parcours),parcours); //on crée l'intelBad
+	datas[strlen(datas)]='\0';
+	write(server, datas, 256); //on l'envoie au server
+      }
+    }
+    else{
+      printf("SNIF, erreur d'envoi :(\n");
+    }
+  }
+  else printf("Aie, votre fichier n'existe pas ! :(\n");
   //TODO: Ecrire cette fonction
 }
 
 void mainClient(){
   //TODO: faire un help des commandes
   char* buffer = malloc(DIRECTORY_LENGTH*sizeof(char));
-  char* envoi = malloc(DIRECTORY_LENGTH*sizeof(char));
   char* private = malloc(11*sizeof(char));
   char* users = malloc(6*sizeof(char));
   char* shut = malloc(5*sizeof(char));
@@ -219,7 +265,6 @@ void mainClient(){
         	  printf("Buffer recu : %s de type %s\n",buffer,type);
         	  if(strcmp("SHUT",type)==0){
         	    free(buffer);
-        	    free(envoi);
         	    free(private);
         	    free(users);
         	    free(shut);
@@ -240,6 +285,11 @@ void mainClient(){
             }
             else if(strcmp("BADD",type)==0){
               readMessage(buffer,"WRNG");
+            }
+	    else if(strcmp("FIOK",type)==0){
+	      char* recu = malloc(256*sizeof(char));
+	      strncpy(recu,buffer+20,256);
+	      printf("%s",recu);
             }
             else if(strcmp("LIST",type)==0){
               printf("Je suis la !\n");
@@ -274,14 +324,18 @@ void mainClient(){
       	  break;
       	default:
       	  memcpy(private,&buffer[0],11);
+	  private[11]='\0';
       	  memcpy(users,&buffer[0],6);
+	  users[6]='\0';
       	  memcpy(shut,&buffer[0],5);
+	  shut[5]='\0';
       	  memcpy(debug,&buffer[0],6);
+	  debug[6]='\0';
       	  memcpy(send,&buffer[0],10);
+	  send[10]='\0';
       	  if(strcmp("!quit",buffer)==0){
       	    deconnexionClient();
       	    free(buffer);
-      	    free(envoi);
       	    free(private);
       	    free(users);
       	    free(shut);
@@ -298,21 +352,13 @@ void mainClient(){
       	  }
       	  else if(strcmp(shut,"!shut")==0){
       	    printf("Blackout !\n");
-      	    free(buffer);
-      	    free(envoi);
-      	    free(private);
-      	    free(users);
-      	    free(shut);
-      	    free(debug);
-      	    free(send);
-      	    free(type);
       	    shutClient();
       	  }
       	  else if(strcmp(debug,"!debug")==0){
       	    debugClient();
       	  }
       	  else if(strcmp(send,"!send file")==0){
-      	    sendFileClient(envoi);
+      	    sendFileClient(buffer);
       	  }
       	  else{
       	    sendPublicMessageClient(buffer);
