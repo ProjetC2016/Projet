@@ -121,7 +121,7 @@ void sendPrivateMessageServer(char* buffer, int l){
   intel[16+(int)strlen(sender)+messageSize]='\0';
   int idReceiver=-1;
   int j;
-  for(j=0; j<nbUsers-1; j++){
+  for(j=0; j<nbUsers; j++){
     if(strcmp(pseudoList[j],receiver)==0){
       idReceiver = j;
     }
@@ -155,21 +155,26 @@ void listUsersServer(char* buffer, int l){
   //on recupere l'id de celui qui a demandé la liste :
   char* id = malloc(4*sizeof(char));
   strncpy(id, buffer+8, 4);
-  int index=0;
-  while (pseudoList[index]){
-    char* intel = malloc((1014+12+(int)strlen(pseudoList[0]))*sizeof(char)); //string pour l'intel envoyé
-    sprintf(intel,"%4d%s%4d%s",(12+(int)strlen(pseudoList[index])),"LIST",nbUsers,pseudoList[index]); //on crée l'intel
-    int idClient = atoi(id);
-    int client = pipes[idClient-1];
-    printf("voici l'id : %d \n ", client);
-    write(client,intel,strlen(intel));
-    index++;
-    printf ("-------------INTEL DU SERV %s \n ", intel);
+  // id[(int)(strlen(id))]='\0';
+  int i;
+  char* intel = malloc((12+(int)strlen(pseudoList[0]))*sizeof(char)); //string pour l'intel envoyé
+  int idClient = atoi(id);
+  int client = pipes[idClient-1];
+  for(i=0;i<counter;i++){
+    if(pipes[i]!=0){
+      sprintf(intel,"%4d%s%4d%s",(12+(int)strlen(pseudoList[i])),"LIST",nbUsers,pseudoList[i]); //on crée l'intel
+      intel[(12+(int)strlen(pseudoList[i]))]='\0';
+      printf("%d J'envoie %s\n",i,intel);
+      int c = write(client,intel,strlen(intel));
+      sleep(2);
+      printf("OK : %d\n",c);
+    }
   }
+  printf("J'ai fini !\n");
 }
-
 /* Fonction pour forcer la déconnexion de tous les id + shutdown du serveur */
 void shutServer(){
+  printf("J'éxécute shutServer\n");
   int i;
   char* intel = malloc(DIRECTORY_LENGTH*sizeof(char));
   char* pseudo = malloc(DIRECTORY_LENGTH*sizeof(char));
@@ -182,8 +187,10 @@ void shutServer(){
     }
   }
   unlink("serverPipe");
+    
   free(intel);
   free(pseudo);
+  printf("J'ai fini !\n");
 }
 
 /*Fonction pour débugger le serveur */
@@ -192,70 +199,70 @@ void debugServer(){
   //EUH......
 }
 
-/*Fonction pour envoyer un fichier */
-void sendFileServer(char* buffer, int l){
-  //TODO: Ecrire cette fonction
-  //Complexe ! A faire en dernier
-}
-
-void mainServer(){
-  int server = open("serverPipe", O_RDONLY); //ouverture du tube server en lecture
-  char *buffer = malloc(DIRECTORY_LENGTH*sizeof(char)); //buffer
-  char *type = malloc(5*sizeof(char));  //string pour le type des messages
-  char* lC = malloc(5*sizeof(char)); //longueur de l'intel
-  while(1){
-    int c = read(server, buffer, DIRECTORY_LENGTH); //on lit dans le tube server
-    if(nbUsers==0 && shutdown==1){
-      printf("Il est mort Jim !\n");
-      break;
-    }
-    if(c!=0){
-      strncpy(lC,buffer,4); //on la stocke
-      int l = atoi(lC); //on la transforme
-      buffer[c]='\0';
-      printf("Message recu : %s\n",buffer);
-      if(strcmp(buffer, "quit") ==0) break;
-      strncpy(type,buffer+4,4); //on récupère le type du message
-      type[4]='\0';
-      printf("Type :%s\n",type);
-      if(strcmp(type,"HELO")==0){ //si le message est une demande de connexion
-        printf("Connexion en cours...\n");
-        connexionServer(buffer,l); //on execute la fonction correspondante
-        printf("Connexion terminée !\n");
-      }
-      //A compléter
-      else if(strcmp(type,"BYEE")==0){ //si le message est une demande de déconnexion
-        deconnexionServer(buffer,l); //on execute la fonction correspondante
-      }
-      else if(strcmp(type,"BCST")==0){ //si le message est une demande d'envoi de message public
-        printf("Je lance SendMessage !\n");
-        sendPublicMessageServer(buffer,l); //on execute la fonction correspondante
-      }
-      else if(strcmp(type,"PRVT")==0){ //si le message est une demande d'envoi de message privé
-        sendPrivateMessageServer(buffer,l); //on execute la fonction correspondante
-      }
-      else if(strcmp(type,"LIST")==0){ //si le message est une demande de la liste des utilisateurs
-        listUsersServer(buffer,l); //on execute la fonction correspondante
-      }
-      else if(strcmp(type,"SHUT")==0){ //si le message est une demande de shutdown total
-        shutServer(); //on execute la fonction correspondante
-        shutdown=1;
-      }
-      else if(strcmp(type,"DEBG")==0){ //si le message est une demande de debug
-        debugServer(buffer,l); //on execute la fonction correspondante
-      }
-      else if(strcmp(type,"FILE")==0){ //si le message est une demande d'envoi de fichier
-        sendFileServer(buffer,l); //on execute la fonction correspondante
-      }
-    }
+  /*Fonction pour envoyer un fichier */
+  void sendFileServer(char* buffer, int l){
+    //TODO: Ecrire cette fonction
+    //Complexe ! A faire en dernier
   }
-  free(buffer); //on free !
-  free(type);
-  free(lC);
-}
 
-int main(int argc, char const *argv[]) {
-  createServer(); //creation du servre
-  mainServer(); //main principal
-  return 0;
-}
+  void mainServer(){
+    int server = open("serverPipe", O_RDONLY); //ouverture du tube server en lecture
+    char *buffer = malloc(DIRECTORY_LENGTH*sizeof(char)); //buffer
+    char *type = malloc(5*sizeof(char));  //string pour le type des messages
+    char* lC = malloc(5*sizeof(char)); //longueur de l'intel
+    while(1){
+      int c = read(server, buffer, DIRECTORY_LENGTH); //on lit dans le tube server
+      if(nbUsers==0 && shutdown==1){
+	printf("Il est mort Jim !\n");
+	break;
+      }
+      if(c!=0){
+	strncpy(lC,buffer,4); //on la stocke
+	int l = atoi(lC); //on la transforme
+	buffer[c]='\0';
+	printf("Message recu : %s\n",buffer);
+	if(strcmp(buffer, "quit") ==0) break;
+	strncpy(type,buffer+4,4); //on récupère le type du message
+	type[4]='\0';
+	printf("Type :%s\n",type);
+	if(strcmp(type,"HELO")==0){ //si le message est une demande de connexion
+	  printf("Connexion en cours...\n");
+	  connexionServer(buffer,l); //on execute la fonction correspondante
+	  printf("Connexion terminée !\n");
+	}
+	//A compléter
+	else if(strcmp(type,"BYEE")==0){ //si le message est une demande de déconnexion
+	  deconnexionServer(buffer,l); //on execute la fonction correspondante
+	}
+	else if(strcmp(type,"BCST")==0){ //si le message est une demande d'envoi de message public
+	  printf("Je lance SendMessage !\n");
+	  sendPublicMessageServer(buffer,l); //on execute la fonction correspondante
+	}
+	else if(strcmp(type,"PRVT")==0){ //si le message est une demande d'envoi de message privé
+	  sendPrivateMessageServer(buffer,l); //on execute la fonction correspondante
+	}
+	else if(strcmp(type,"LIST")==0){ //si le message est une demande de la liste des utilisateurs
+	  listUsersServer(buffer,l); //on execute la fonction correspondante
+	}
+	else if(strcmp(type,"SHUT")==0){ //si le message est une demande de shutdown total
+	  shutServer(); //on execute la fonction correspondante
+	  shutdown=1;
+	}
+	else if(strcmp(type,"DEBG")==0){ //si le message est une demande de debug
+	  debugServer(buffer,l); //on execute la fonction correspondante
+	}
+	else if(strcmp(type,"FILE")==0){ //si le message est une demande d'envoi de fichier
+	  sendFileServer(buffer,l); //on execute la fonction correspondante
+	}
+      }
+    }
+    free(buffer); //on free !
+    free(type);
+    free(lC);
+  }
+
+  int main(int argc, char const *argv[]) {
+    createServer(); //creation du servre
+    mainServer(); //main principal
+    return 0;
+  }

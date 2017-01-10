@@ -80,6 +80,7 @@ void readMessage(char* recu, char* type){
     int pseudoSize = atoi(strncpy(psdSize, recu+8, 4)); //on récupère la taille du pseudo du sender
     char* sender = malloc(pseudoSize*sizeof(char));
     strncpy(sender, recu+12, pseudoSize); //on récupère le pseudo du sender
+    sender[pseudoSize]='\0';
     char* msgSize = malloc(4*sizeof(char));
     int messageSize = atoi(strncpy(msgSize, recu+12+pseudoSize, 4)); //on récupère la taille du message
     char* message = malloc(messageSize+sizeof(char));
@@ -121,20 +122,42 @@ void sendPrivateMessageClient(char* buffer){
   free(message);
   free(intel);
 }
-
-/*Fonction pour obtenir la liste des utilisateurs */
 void listUsersClient(){
   char* intel = malloc(13*sizeof(char)); //string pour l'intel envoyé
-  char* buffer = malloc(1024*sizeof(char));
   sprintf(intel,"%4d%s%4d",12,"LIST",id); //on crée l'intel
+  intel[12]='\0';
   write(server, intel, strlen(intel));//on écrit l'intel dans le tube client
-  printf(" !!!! %d \n", client);
-  //while(1){
-  read(client,buffer,DIRECTORY_LENGTH);
-  //TODO : le faire autant de fois qu'il y a de pseudos
-  printf("#### %s \n",buffer);
-
+  printf("Liste des utilisateurs connectés : \n");
+  free(intel);
 }
+
+/*Fonction pour obtenir la liste des utilisateurs */
+/*void listUsersClient(){
+  char* intel = malloc(13*sizeof(char)); //string pour l'intel envoyé
+  sprintf(intel,"%4d%s%4d",12,"LIST",id); //on crée l'intel
+  intel[12]='\0';
+  write(server, intel, strlen(intel));//on écrit l'intel dans le tube client
+  printf("Liste des utilisateurs connectés : \n");
+  char* idC = malloc(4*sizeof(char)); //String id
+  char* buffer = malloc(DIRECTORY_LENGTH*sizeof(char));
+  char* pseudo = malloc(DIRECTORY_LENGTH*sizeof(char));
+  int index = 0;
+  int nbUsers = 0;
+  while(1){
+    read(client,buffer,DIRECTORY_LENGTH);
+    buffer[(int)(strlen(buffer))]='\0';
+    strncpy(pseudo, buffer+12, strlen(buffer)-12);
+    pseudo[(int)(strlen(pseudo))]='\0';
+    printf("#-  %s \n",pseudo);
+    if(index==0){
+      strncpy(idC,buffer+8,4); //on le stocke dans idC
+      nbUsers=atoi(idC);
+    }
+    index++;
+    if(index>=nbUsers) break;
+  }
+}*/
+
 
 /*Fonction pour forcer la déconnexion de tous les id + shutdown du serveur  */
 void shutClient(){
@@ -181,7 +204,7 @@ void mainClient(){
     if(n>0){
       if(FD_ISSET(client, &readers)){
       	l = read(client,buffer, DIRECTORY_LENGTH);
-        printf("Je capte qqch dans le tube ! %lu\n",l);
+        printf("Je capte qqch dans le tube ! %d\n",l);
       	memcpy(type,&buffer[4],4);
       	type[4]='\0';
       	buffer[l]='\0';
@@ -218,6 +241,21 @@ void mainClient(){
             else if(strcmp("BADD",type)==0){
               readMessage(buffer,"WRNG");
             }
+            else if(strcmp("LIST",type)==0){
+              printf("Je suis la !\n");
+              char* pseudo = malloc(DIRECTORY_LENGTH*sizeof(char));
+              char* i = malloc(4*sizeof(char));
+              char* len = malloc(4*sizeof(char));
+              int rlen = 0;
+              strncpy(len,buffer,4);
+              rlen = atoi(len);
+              strncpy(pseudo, buffer+12, rlen-12);
+              pseudo[rlen-12]='\0';
+              printf("#-  %s #\n",pseudo);
+              free(pseudo);
+              free(i);
+              free(len);
+            }
         	  break;
         	}
       }
@@ -226,7 +264,7 @@ void mainClient(){
       	fgets(buffer,DIRECTORY_LENGTH,stdin);
       	l = strlen(buffer)-1;
       	buffer[l]='\0';
-      	printf("Buffer : %s de longueur %lu\n",buffer,l);
+      	printf("Buffer : %s de longueur %d\n",buffer,l);
       	switch (l) {
       	case 0 | 1:
       	  printf("Aie, chaine vide\n");
