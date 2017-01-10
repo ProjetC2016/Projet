@@ -65,35 +65,61 @@ void deconnexionClient(){
 
 /*Fonction d'envoi de message public : envoie un message à tous les utilisateurs */
 void sendPublicMessageClient(char* buffer){
-  //TODO: Finir cette fonction
   printf("!!!!! buffer %s\n", buffer);
-  char* intel = malloc(16+strlen(buffer)*sizeof(char)); //string pour l'intel envoyé au serveur
-  sprintf(intel,"%4d%s%4d%4d%s",16+(int)strlen(buffer),"BCST",id,(int)strlen(buffer),buffer); //on crée l'intel MESSAGE PUBLIC
+  char* intel = malloc(17+strlen(buffer)*sizeof(char)); //string pour l'intel envoyé au serveur
+  sprintf(intel,"%4d%s%4d%4d%s",17+(int)strlen(buffer),"BCST",id,(int)strlen(buffer),buffer); //on crée l'intel MESSAGE PUBLIC
   intel[16+strlen(buffer)] = '\0';
   printf("!!!!! Intel %s\n", intel);
   write(server,intel,strlen(intel));
   free(intel);
 }
 
-void readMessage(char* recu){
-  char* psdSize = malloc(4*sizeof(char));
-  int pseudoSize = atoi(strncpy(psdSize, recu+8, 4)); //on récupère la taille du pseudo du sender
-  char* sender = malloc(pseudoSize*sizeof(char));
-  strncpy(sender, recu+12, pseudoSize); //on récupère le pseudo du sender
-  char* msgSize = malloc(4*sizeof(char));
-  int messageSize = atoi(strncpy(msgSize, recu+12+pseudoSize, 4)); //on récupère la taille du message
-  char* message = malloc(messageSize*sizeof(char));
-  strncpy(message, recu+16+pseudoSize, messageSize); //on récupère le message
-  printf("[%s] %s\n", sender, message);
-  free(psdSize);
-  free(sender);
-  free(msgSize);
-  free(message);
+void readMessage(char* recu, char* type){
+  if(strcmp(type, "WRNG")!=0){
+    char* psdSize = malloc(4*sizeof(char));
+    int pseudoSize = atoi(strncpy(psdSize, recu+8, 4)); //on récupère la taille du pseudo du sender
+    char* sender = malloc(pseudoSize*sizeof(char));
+    strncpy(sender, recu+12, pseudoSize); //on récupère le pseudo du sender
+    char* msgSize = malloc(4*sizeof(char));
+    int messageSize = atoi(strncpy(msgSize, recu+12+pseudoSize, 4)); //on récupère la taille du message
+    char* message = malloc(messageSize+sizeof(char));
+    strncpy(message, recu+16+pseudoSize, messageSize); //on récupère le message
+    message[messageSize] = '\0';
+    if(strcmp(type,"BCST")==0){
+      printf("[%s] %s\n", sender, message);
+    }
+    if(strcmp(type,"PRVT")==0){
+      printf("[%s-->%s] %s\n", sender,pseudo, message);
+    }
+    if(strcmp(type,"OKPV")==0){
+      printf("[%s-->%s] %s\n", pseudo,sender, message); //ici le nom sender n'est pas bon, c'est en fait le receiver du message privé
+    }
+    free(psdSize);
+    free(sender);
+    free(msgSize);
+    free(message);
+  }else{
+    printf("Le destinataire choisi n'existe pas\n");
+  }
 }
 
 /*Fonction d'envoi de message privé : envoie un message à un seul utilisateur */
 void sendPrivateMessageClient(char* buffer){
-  //TODO: Ecrire cette fonction
+  printf("!!!!! bufferPrivate %s\n", buffer);
+  char private[8];
+  char to[2];
+  char* receiver = malloc(strlen(buffer)*sizeof(char));
+  sscanf(buffer, "%s %s %s", private,to,receiver);
+  char* message = malloc(strlen(buffer)*sizeof(char));
+  strncpy(message, buffer+12+strlen(receiver),strlen(buffer)-strlen(receiver)-12);
+  printf("!!!!! messagePrivate %s\n", buffer);
+  char* intel = malloc(21+strlen(buffer)*sizeof(char)); //string pour l'intel envoyé au serveur
+  sprintf(intel,"%4d%s%4d%4d%s%4d%s", 21+(int)strlen(buffer),"PRVT",id,(int)strlen(receiver),receiver,(int)strlen(message),message);
+  intel[20+strlen(buffer)]='\0';
+  write(server,intel,strlen(intel));
+  free(receiver);
+  free(message);
+  free(intel);
 }
 
 /*Fonction pour obtenir la liste des utilisateurs */
@@ -181,7 +207,16 @@ void mainClient(){
         	    exit(0);
         	  }
             else if(strcmp("BCST",type)==0){
-              readMessage(buffer);
+              readMessage(buffer,"BCST");
+            }
+            else if(strcmp("PRVT",type)==0){
+              readMessage(buffer,"PRVT");
+            }
+            else if(strcmp("OKPV",type)==0){
+              readMessage(buffer,"OKPV");
+            }
+            else if(strcmp("BADD",type)==0){
+              readMessage(buffer,"WRNG");
             }
         	  break;
         	}

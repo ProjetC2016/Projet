@@ -11,6 +11,7 @@
 void createClient();
 void deconnexionClient();
 void sendPublicMessageClient(char* buffer);
+void readMessage(char* recu, char* type);
 void sendPrivateMessageClient(char* buffer);
 void listUsersClient();
 void shutClient();

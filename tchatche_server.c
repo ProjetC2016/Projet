@@ -72,14 +72,11 @@ void deconnexionServer(char* buffer, int l){
 /*Fonction d'envoi de message public : récupère le message et le transmet */
 void sendPublicMessageServer(char* buffer, int l){
   printf("DEBUT\n");
-  //TODO: Ecrire cette fonction
-  //1) recevoir le message
-  //2) le transmettre à tous les clients de la liste
   char* idC = malloc(4*sizeof(char)); //String idC envoyé par le client au serveur
   strncpy(idC,buffer+8,4); //on le récupère dans le buffer
   int idClient = atoi(idC); //on le transforme pour récupérer l'id
   char* sender = pseudoList[idClient-1]; //On récupère le pseudo de celui qui envoie le message
-  printf("#### sender de taille %d : %s ####\n", strlen(sender),sender);
+  printf("#### sender de taille %d : %s ####\n", (int)strlen(sender),sender);
   char* msgSize = malloc(4*sizeof(char)); //String correspondant à la taille du message
   strncpy(msgSize, buffer+12, 4);
   int messageSize = atoi(msgSize);
@@ -103,9 +100,54 @@ void sendPublicMessageServer(char* buffer, int l){
 
 /*Fonction d'envoi de message privé : récupère le message et le transmet */
 void sendPrivateMessageServer(char* buffer, int l){
-  //TODO: Ecrire cette fonction (similaire à sendPublic)
-  //1) recevoir le message
-  //2) le transmettre à la personne désignée
+  printf("DEBUT\n");
+  char* idC = malloc(4*sizeof(char)); //String idC envoyé par le client au serveur
+  strncpy(idC,buffer+8,4); //on le récupère dans le buffer
+  int idClient = atoi(idC); //on le transforme pour récupérer l'id
+  char* sender = pseudoList[idClient-1]; //On récupère le pseudo de celui qui envoie le message
+  printf("#### sender de taille %d : %s ####\n", (int)strlen(sender),sender);
+  char* psdSize = malloc(4*sizeof(char)); //String correspondant à la taille du pseudo de celui qui recoit
+  strncpy(psdSize, buffer+12, 4);
+  int pseudoSize = atoi(psdSize);
+  char* receiver = malloc(pseudoSize*sizeof(char));
+  strncpy(receiver, buffer+16, pseudoSize);
+  char* msgSize = malloc(4*sizeof(char)); //String correspondant à la taille du message
+  strncpy(msgSize, buffer+16+pseudoSize, 4);
+  int messageSize = atoi(msgSize);
+  char* message = malloc(messageSize*sizeof(char));
+  strncpy(message, buffer+20+pseudoSize, messageSize);
+  char* intel = malloc((17+strlen(sender)+messageSize)*sizeof(char));
+  sprintf(intel,"%4d%s%4d%s%4d%s", 16+(int)strlen(sender)+messageSize, "PRVT", (int)strlen(sender), sender, messageSize, message);
+  intel[16+(int)strlen(sender)+messageSize]='\0';
+  int idReceiver=-1;
+  int j;
+  for(j=0; j<nbUsers-1; j++){
+    if(strcmp(pseudoList[j],receiver)==0){
+      idReceiver = j;
+    }
+  }
+  if(idReceiver!=-1){
+    write(pipes[idReceiver], intel, strlen(intel)); //On écrit l'intel dans le tube de celui qui recoit
+    char* intelOk = malloc((17+strlen(receiver)+messageSize)*sizeof(char)); //string pour l'intelOk envoyé
+    sprintf(intelOk,"%4d%s%4d%s%4d%s",16+(int)strlen(receiver)+messageSize,"OKPV",(int)strlen(receiver),receiver, messageSize, message); //on crée l'intelOk
+    intelOk[16+strlen(receiver)+messageSize]='\0';
+    write(pipes[idClient-1], intelOk, strlen(intelOk)); //on informe le client que le message privé a été envoyé
+    free(intelOk);
+  }else{
+    char* intelBad = malloc(17*sizeof(char)); //string pour l'intelBad envoyé
+    sprintf(intelBad,"%4d%s%4d%s",16,"BADD",4,"WRNG"); //on crée l'intelBad
+    intelBad[16]='\0';
+    write(pipes[idClient-1], intelBad, strlen(intelBad));
+    free(intelBad);
+  }
+
+  free(idC);
+  free(psdSize);
+  free(receiver);
+  free(msgSize);
+  free(message);
+  free(intel);
+  printf("FIN\n");
 }
 
 /*Fonction pour obtenir la liste des utilisateurs */
@@ -169,9 +211,8 @@ void mainServer(){
     }
     if(c!=0){
       strncpy(lC,buffer,4); //on la stocke
-      lC[4]='\0';
       int l = atoi(lC); //on la transforme
-      buffer[l]='\0';
+      buffer[c]='\0';
       printf("Message recu : %s\n",buffer);
       if(strcmp(buffer, "quit") ==0) break;
       strncpy(type,buffer+4,4); //on récupère le type du message
