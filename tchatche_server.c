@@ -183,8 +183,10 @@ void shutServer(){
 
 /*Fonction pour débugger le serveur */
 void debugServer(){
-  //TODO: Ecrire cette fonction
-  //EUH......
+    printf("----- Informations techniques -----\n");
+    printf("Nombre d'utilisateurs : %d\n",nbUsers);
+    printf("Nombre de transferts de fichiers effectués : %d\n",idTransfert);
+
 }
 
 /*Fonction pour envoyer un fichier */

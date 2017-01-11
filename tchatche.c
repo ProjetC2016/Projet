@@ -58,10 +58,8 @@ void deconnexionClient(){
   id = 0;
   unlink(pseudo); //suppression du tube client
   printf("A bientôt %s !\n", pseudo);
-  free(pseudo);//free !
   free(intel);
   free(recu);
-  free(standin);
   exit(0);
 }
 
@@ -143,7 +141,10 @@ void shutClient(){
 
 /*Fonction pour débugger le serveur */
 void debugClient(){
-  //TODO: Ecrire cette fonction
+  char* intel = malloc(9*sizeof(char)); //infos envoyées au serveur
+  sprintf(intel,"%4d%s",8,"DEBG"); //on crée l'intel correspondant
+  intel[8]='\0';
+  write(server, intel, 8); //on l'envoie au server
 }
 
 /*Fonction pour envoyer un fichier */
