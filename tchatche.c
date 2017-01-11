@@ -38,7 +38,9 @@ void createClient(){
   id = atoi(idC); //on le transforme pour récupérer l'id
   printf("Vous êtes connecté(e)\n");
   printf("(!help pour la liste des commandes disponibles)\n" );
+  free(standin);
   free(buffer); //et on free !
+  free(pseudo);
   free(intel);
   free(recu);
   free(idC);
@@ -298,16 +300,17 @@ void mainClient(){
       	  memcpy(send,&buffer[0],10);
 	        send[10]='\0';
           memcpy(help,&buffer[0],5);
-	        send[5]='\0';
+	        help[5]='\0';
       	  if(strcmp("!quit",buffer)==0){
-      	    deconnexionClient();
       	    free(buffer);
       	    free(private);
       	    free(users);
       	    free(shut);
       	    free(debug);
       	    free(send);
+            free(help);
       	    free(type);
+            deconnexionClient();
       	    exit(0);
       	  }
       	  else if(strcmp(private,"!private to")==0){
