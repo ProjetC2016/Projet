@@ -2,14 +2,14 @@
 #include <stdlib.h>
 #include "tchatche_server.h"
 
-#define DIRECTORY_LENGTH 1024
+#define LENGTH_MAX 1024
 
 int counter = 1; //id possible pour un client (augmente de 1 à chaque ajout d'un nouveau client)
 int nbUsers = 0;
 int idTransfert = 0;
-int logList[DIRECTORY_LENGTH];
-char* pseudoList[DIRECTORY_LENGTH];
-int pipes[DIRECTORY_LENGTH];
+int logList[LENGTH_MAX];
+char* pseudoList[LENGTH_MAX];
+int pipes[LENGTH_MAX];
 int shutdown = 0;
 int server;
 
@@ -17,14 +17,6 @@ int server;
 void createServer(){
   if(access("serverPipe", F_OK) == -1){ //si le tube server n'existe pas
     mkfifo("serverPipe", 0666); //je le crée
-  }
-}
-
-void test(){
-  printf("Liste des pseudos : ");
-  int i;
-  for (i=0;i<10; i++){
-    printf("%s   - ", pseudoList[i]);
   }
 }
 
@@ -42,13 +34,12 @@ void connexionServer(char* buffer, int l){
     intel[12]='\0';
     write(client, intel, strlen(intel));//on écrit l'intel dans le tube client
     logList[counter-1]=counter;
-    pseudoList[counter-1]=malloc(DIRECTORY_LENGTH*sizeof(char));
+    pseudoList[counter-1]=malloc(LENGTH_MAX*sizeof(char));
     strcpy(pseudoList[counter-1],pseudo);
     counter++; //on augmente le counter pour le prochain tour
     nbUsers++; //on augmente le nombre d'utilisateurs
     free(pseudo); //on free ! (on a tout compris)
     free(intel);
-    //test();
   }
 }
 
@@ -85,7 +76,7 @@ void sendPublicMessageServer(char* buffer, int l){
   char* message = malloc(messageSize*sizeof(char));
   strncpy(message, buffer+16, messageSize);
   char* intel = malloc((17+strlen(sender)+messageSize)*sizeof(char));
-  sprintf(intel,"%4d%s%4d%s%4d%s", 16+(int)strlen(sender)+messageSize, "BCST", (int)strlen(sender), sender, messageSize, message);
+  sprintf(intel,"%4d%s%4d%s%4d%s", 16+(int)strlen(sender)+messageSize, "BCST", (int)strlen(sender), sender, messageSize, message); //on crée l'intel qu'il faut
   intel[16+(int)strlen(sender)+messageSize]='\0';
   int i;
   for(i=0;i<counter;i++){
@@ -119,7 +110,7 @@ void sendPrivateMessageServer(char* buffer, int l){
   char* message = malloc(messageSize*sizeof(char));
   strncpy(message, buffer+20+pseudoSize, messageSize);
   char* intel = malloc((17+strlen(sender)+messageSize)*sizeof(char));
-  sprintf(intel,"%4d%s%4d%s%4d%s", 16+(int)strlen(sender)+messageSize, "PRVT", (int)strlen(sender), sender, messageSize, message);
+  sprintf(intel,"%4d%s%4d%s%4d%s", 16+(int)strlen(sender)+messageSize, "PRVT", (int)strlen(sender), sender, messageSize, message); //on crée l'intel correspondant
   intel[16+(int)strlen(sender)+messageSize]='\0';
   int idReceiver=-1;
   int j;
@@ -139,7 +130,7 @@ void sendPrivateMessageServer(char* buffer, int l){
     char* intelBad = malloc(17*sizeof(char)); //string pour l'intelBad envoyé
     sprintf(intelBad,"%4d%s%4d%s",16,"BADD",4,"WRNG"); //on crée l'intelBad
     intelBad[16]='\0';
-    write(pipes[idClient-1], intelBad, strlen(intelBad));
+    write(pipes[idClient-1], intelBad, strlen(intelBad)); //on previent le client que ca n'a pas marché...
     free(intelBad);
   }
 
@@ -154,16 +145,15 @@ void sendPrivateMessageServer(char* buffer, int l){
 
 /*Fonction pour obtenir la liste des utilisateurs */
 void listUsersServer(char* buffer, int l){
-  //on recupere l'id de celui qui a demandé la liste :
-  char* id = malloc(4*sizeof(char));
+  char* id = malloc(4*sizeof(char)); //on recupere l'id de celui qui a demandé la liste
   strncpy(id, buffer+8, 4);
-  // id[(int)(strlen(id))]='\0';
   int i;
   char* intel = malloc((12+(int)strlen(pseudoList[0]))*sizeof(char)); //string pour l'intel envoyé
   int idClient = atoi(id);
   int client = pipes[idClient-1];
   for(i=0;i<counter;i++){
     if(pipes[i]!=0){
+      //on envoie la liste des users
       sprintf(intel,"%4d%s%4d%s",(12+(int)strlen(pseudoList[i])),"LIST",nbUsers,pseudoList[i]); //on crée l'intel
       intel[(12+(int)strlen(pseudoList[i]))]='\0';
       printf("%d J'envoie %s\n",i,intel);
@@ -174,14 +164,16 @@ void listUsersServer(char* buffer, int l){
   }
   printf("J'ai fini !\n");
 }
+
 /* Fonction pour forcer la déconnexion de tous les id + shutdown du serveur */
 void shutServer(){
   printf("J'éxécute shutServer\n");
   int i;
-  char* intel = malloc(DIRECTORY_LENGTH*sizeof(char));
-  char* pseudo = malloc(DIRECTORY_LENGTH*sizeof(char));
+  char* intel = malloc(LENGTH_MAX*sizeof(char));
+  char* pseudo = malloc(LENGTH_MAX*sizeof(char));
   for(i=0;i<counter;i++){
     if(pipes[i]!=0){
+      //on demande à tous les utilisateurs de se déconnecter
       strcpy(pseudo,pseudoList[i]);
       sprintf(intel,"%4d%s%4d%s",12+(int)strlen(pseudo),"SHUT",(int) strlen(pseudo),pseudo); //on crée l'intel
       intel[12+strlen(pseudo)]='\0';
@@ -202,127 +194,125 @@ void debugServer(){
   //EUH......
 }
 
-  /*Fonction pour envoyer un fichier */
-  void sendFileServer(char* buffer, int l){
-    printf("Super ! un fichier !\n");
-    char* strlenDC = malloc(DIRECTORY_LENGTH*sizeof(char));
-    int strlenD;
-    strncpy(strlenDC,buffer+16,4);
-    strlenD=atoi(strlenDC);
-    char* destinataire = malloc(DIRECTORY_LENGTH*sizeof(char));
-    strncpy(destinataire,buffer+20,strlenD);
-    destinataire[(int) strlen(destinataire)]='\0';
-    char* idSourceC = malloc(DIRECTORY_LENGTH*sizeof(char));
-    strncpy(idSourceC,buffer+12,4);
-    int idSource = atoi(idSourceC);
-    char* longueurFC = malloc(8*sizeof(char));
-    strncpy(longueurFC,buffer+20+strlenD,8);
-    int longueurF = atoi(longueurFC);
-    char* name = malloc(DIRECTORY_LENGTH*sizeof(char));
-    strncpy(name,buffer+20+strlenD+8,strlen(buffer)-20-strlenD-8);
-    char* intel = malloc(DIRECTORY_LENGTH*sizeof(char)); //infos envoyées au serveur
-    sprintf(intel,"%4d%s%4d%4d%8d%4d%s",l,"FILE",0,idTransfert,longueurF,(int)strlen(name),name); //on crée l'intel CONNEXION correspondant
-    idTransfert++;
-    int idReceiver=-1;
-    int j;
-    for(j=0; j<nbUsers; j++){
-      if(strcmp(pseudoList[j],destinataire)==0){
-	idReceiver = j;
-      }
+/*Fonction pour envoyer un fichier */
+void sendFileServer(char* buffer, int l){
+  printf("Super ! un fichier !\n");
+  char* strlenDC = malloc(LENGTH_MAX*sizeof(char));
+  int strlenD;
+  strncpy(strlenDC,buffer+16,4);
+  strlenD=atoi(strlenDC);
+  char* destinataire = malloc(LENGTH_MAX*sizeof(char));
+  strncpy(destinataire,buffer+20,strlenD);
+  destinataire[(int) strlen(destinataire)]='\0';
+  char* idSourceC = malloc(LENGTH_MAX*sizeof(char));
+  strncpy(idSourceC,buffer+12,4);
+  int idSource = atoi(idSourceC);
+  char* longueurFC = malloc(8*sizeof(char));
+  strncpy(longueurFC,buffer+20+strlenD,8);
+  int longueurF = atoi(longueurFC);
+  char* name = malloc(LENGTH_MAX*sizeof(char));
+  strncpy(name,buffer+20+strlenD+8,strlen(buffer)-20-strlenD-8);
+  char* intel = malloc(LENGTH_MAX*sizeof(char)); //infos envoyées au serveur
+  sprintf(intel,"%4d%s%4d%4d%8d%4d%s",l,"FILE",0,idTransfert,longueurF,(int)strlen(name),name); //on crée l'intel CONNEXION correspondant
+  idTransfert++;
+  int idReceiver=-1;
+  int j;
+  //on va chercher le bon id pour le destinataire
+  for(j=0; j<nbUsers; j++){
+    if(strcmp(pseudoList[j],destinataire)==0){
+      idReceiver = j;
     }
-    if(idReceiver!=-1){
-      write(pipes[idReceiver], intel, strlen(intel)); //On écrit l'intel dans le tube de celui qui recoit
-      char* okok = malloc(13*sizeof(char)); //string pour l'intelOk envoyé
-      sprintf(okok,"%4d%s%4d",12,"OKOK",idTransfert); //on crée l'intelOk
-      okok[12]='\0';
-      write(pipes[idSource-1], okok, strlen(okok)); //on informe le client que le message privé a été envoyé
-      free(okok);
-    }
-    else{
-      char* intelBad = malloc(17*sizeof(char)); //string pour l'intelBad envoyé
-      sprintf(intelBad,"%4d%s",8,"BADD"); //on crée l'intelBad
-      intelBad[8]='\0';
-      write(pipes[idSource-1], intelBad, strlen(intelBad));
-      free(intelBad);
-    }
-    //Réception et transfert
-    int nbMessages = longueurF/256 +1;
-    int i;
-    char* datas = malloc(DIRECTORY_LENGTH*sizeof(char));
-    for(i=0;i<nbMessages;i++){
-      read(server, datas, 256);
-      datas[strlen(datas)]='\0';
-      write(pipes[idReceiver], datas, 256); //on l'envoie au server
-    }
-    
-    
-    //TODO: Ecrire cette fonction
-    //Complexe ! A faire en dernier
   }
+  if(idReceiver!=-1){
+    //si on l'a trouvé
+    write(pipes[idReceiver], intel, strlen(intel)); //On écrit l'intel dans le tube de celui qui recoit
+    char* okok = malloc(13*sizeof(char)); //string pour l'intelOk envoyé
+    sprintf(okok,"%4d%s%4d",12,"OKOK",idTransfert); //on crée l'intelOk
+    okok[12]='\0';
+    write(pipes[idSource-1], okok, strlen(okok)); //on informe le client que le message privé a été envoyé
+    free(okok);
+  }
+  else{ //sinon
+    char* intelBad = malloc(17*sizeof(char)); //string pour l'intelBad envoyé
+    sprintf(intelBad,"%4d%s",8,"BADD"); //on crée l'intelBad
+    intelBad[8]='\0';
+    write(pipes[idSource-1], intelBad, strlen(intelBad)); //Aie ca n'a pas marché
+    free(intelBad);
+  }
+  //Réception et transfert
+  int nbMessages = longueurF/256 +1;
+  int i;
+  char* datas = malloc(LENGTH_MAX*sizeof(char));
+  for(i=0;i<nbMessages;i++){ //on transmet les données
+    read(server, datas, 256);
+    datas[strlen(datas)]='\0';
+    write(pipes[idReceiver], datas, 256); //on l'envoie au server
+  }
+}
 
-  void mainServer(){
-    server = open("serverPipe", O_RDONLY); //ouverture du tube server en lecture
-    char *buffer = malloc(DIRECTORY_LENGTH*sizeof(char)); //buffer
-    char *type = malloc(5*sizeof(char));  //string pour le type des messages
-    char* lC = malloc(5*sizeof(char)); //longueur de l'intel
-    while(1){
-      printf("J'attends %d\n",nbUsers);
-      if(nbUsers==0 && shutdown==1){
-	unlink("serverPipe");
-	printf("Il est mort Jim !\n");
-	break;
+/* Main principal pour le server */
+void mainServer(){
+  server = open("serverPipe", O_RDONLY); //ouverture du tube server en lecture
+  char *buffer = malloc(LENGTH_MAX*sizeof(char)); //buffer
+  char *type = malloc(5*sizeof(char));  //string pour le type des messages
+  char* lC = malloc(5*sizeof(char)); //longueur de l'intel
+  while(1){
+    printf("J'attends %d\n",nbUsers);
+    if(nbUsers==0 && shutdown==1){
+      unlink("serverPipe");
+      printf("Il est mort Jim !\n");
+      break;
+    }
+    int c = read(server, buffer, LENGTH_MAX); //on lit dans le tube server
+    if(c!=0){
+      strncpy(lC,buffer,4); //on la stocke
+      int l = atoi(lC); //on la transforme
+      buffer[c]='\0';
+      printf("Message recu : %s\n",buffer);
+      if(strcmp(buffer, "quit") ==0) break;
+      strncpy(type,buffer+4,4); //on récupère le type du message
+      type[4]='\0';
+      printf("Type :%s\n",type);
+      if(strcmp(type,"HELO")==0){ //si le message est une demande de connexion
+	printf("Connexion en cours...\n");
+	connexionServer(buffer,l); //on execute la fonction correspondante
+	printf("Connexion terminée !\n");
       }
-      int c = read(server, buffer, DIRECTORY_LENGTH); //on lit dans le tube server
-      if(c!=0){
-	strncpy(lC,buffer,4); //on la stocke
-	int l = atoi(lC); //on la transforme
-	buffer[c]='\0';
-	printf("Message recu : %s\n",buffer);
-	if(strcmp(buffer, "quit") ==0) break;
-	strncpy(type,buffer+4,4); //on récupère le type du message
-	type[4]='\0';
-	printf("Type :%s\n",type);
-	if(strcmp(type,"HELO")==0){ //si le message est une demande de connexion
-	  printf("Connexion en cours...\n");
-	  connexionServer(buffer,l); //on execute la fonction correspondante
-	  printf("Connexion terminée !\n");
+      else if(strcmp(type,"BYEE")==0){ //si le message est une demande de déconnexion
+	int i = 0;
+	for(i=0;i<((int) strlen(buffer))/l;i++){
+	  deconnexionServer(buffer+12*i,l); //on execute la fonction correspondante
 	}
-	//A compléter
-	else if(strcmp(type,"BYEE")==0){ //si le message est une demande de déconnexion
-	  int i = 0;
-	  for(i=0;i<((int) strlen(buffer))/l;i++){
-	    deconnexionServer(buffer+12*i,l); //on execute la fonction correspondante
-	  }
-	}
-	else if(strcmp(type,"BCST")==0){ //si le message est une demande d'envoi de message public
-	  printf("Je lance SendMessage !\n");
-	  sendPublicMessageServer(buffer,l); //on execute la fonction correspondante
-	}
-	else if(strcmp(type,"PRVT")==0){ //si le message est une demande d'envoi de message privé
-	  sendPrivateMessageServer(buffer,l); //on execute la fonction correspondante
-	}
-	else if(strcmp(type,"LIST")==0){ //si le message est une demande de la liste des utilisateurs
-	  listUsersServer(buffer,l); //on execute la fonction correspondante
-	}
-	else if(strcmp(type,"SHUT")==0){ //si le message est une demande de shutdown total
-	  shutServer(); //on execute la fonction correspondante
-	  shutdown=1;
-	}
-	else if(strcmp(type,"DEBG")==0){ //si le message est une demande de debug
-	  debugServer(buffer,l); //on execute la fonction correspondante
-	}
-	else if(strcmp(type,"FILE")==0){ //si le message est une demande d'envoi de fichier
-	  sendFileServer(buffer,l); //on execute la fonction correspondante
-	}
+      }
+      else if(strcmp(type,"BCST")==0){ //si le message est une demande d'envoi de message public
+	printf("Je lance SendMessage !\n");
+	sendPublicMessageServer(buffer,l); //on execute la fonction correspondante
+      }
+      else if(strcmp(type,"PRVT")==0){ //si le message est une demande d'envoi de message privé
+	sendPrivateMessageServer(buffer,l); //on execute la fonction correspondante
+      }
+      else if(strcmp(type,"LIST")==0){ //si le message est une demande de la liste des utilisateurs
+	listUsersServer(buffer,l); //on execute la fonction correspondante
+      }
+      else if(strcmp(type,"SHUT")==0){ //si le message est une demande de shutdown total
+	shutServer(); //on execute la fonction correspondante
+	shutdown=1;
+      }
+      else if(strcmp(type,"DEBG")==0){ //si le message est une demande de debug
+	debugServer(buffer,l); //on execute la fonction correspondante
+      }
+      else if(strcmp(type,"FILE")==0){ //si le message est une demande d'envoi de fichier
+	sendFileServer(buffer,l); //on execute la fonction correspondante
       }
     }
-    free(buffer); //on free !
-    free(type);
-    free(lC);
   }
+  free(buffer); //on free !
+  free(type);
+  free(lC);
+}
 
-  int main(int argc, char const *argv[]) {
-    createServer(); //creation du servre
-    mainServer(); //main principal
-    return 0;
-  }
+int main(int argc, char const *argv[]) {
+  createServer(); //creation du servre
+  mainServer(); //main principal
+  return 0;
+}

@@ -3,7 +3,7 @@
 #include "tchatche.h"
 
 #define MAX(x,y) ((x)>(y)?(x):(y))
-#define DIRECTORY_LENGTH 1024
+#define LENGTH_MAX 1024
 
 int client = 0;
 int id = 0;
@@ -13,13 +13,14 @@ char* standin;
 size_t l;
 fd_set readers;
 
+/*Fonction de connexion : connecte le client */
 void createClient(){
   server = open("serverPipe", O_WRONLY); //on ouvre le tube server en écriture
-  standin = malloc(DIRECTORY_LENGTH*sizeof(char));
-  char *buffer = malloc(DIRECTORY_LENGTH*sizeof(char));
-  pseudo = malloc(DIRECTORY_LENGTH*sizeof(char));
+  standin = malloc(LENGTH_MAX*sizeof(char));
+  char *buffer = malloc(LENGTH_MAX*sizeof(char));
+  pseudo = malloc(LENGTH_MAX*sizeof(char));
   printf("Pseudo> ");
-  fgets(buffer, DIRECTORY_LENGTH, stdin); //on récupère le pseudo
+  fgets(buffer, LENGTH_MAX, stdin); //on récupère le pseudo
   strncpy(pseudo,buffer,strlen(buffer)-1); //on le stocke dans la variable correspondante
   pseudo[strlen(buffer)-1]='\0';
   if(access(pseudo, F_OK) == -1){ //si le fichier n'est pas crée
@@ -33,7 +34,7 @@ void createClient(){
   client = open(pseudo, O_RDONLY); //on ouvre son propre tube en lecture
   char* recu = malloc(12*sizeof(char)); //message recu du serveur
   char* idC = malloc(4*sizeof(char)); //String id
-  read(client, recu, DIRECTORY_LENGTH); //on lit la tube
+  read(client, recu, LENGTH_MAX); //on lit la tube
   strncpy(idC,recu+8,4); //on le stocke dans idC
   id = atoi(idC); //on le transforme pour récupérer l'id
   printf("Connected. ID : %d\n",id);
@@ -51,12 +52,12 @@ void deconnexionClient(){
   intel[12]='\0';
   write(server, intel, strlen(intel)); //on l'envoie au serveur
   char* recu = malloc(12*sizeof(char)); //message recu du serveur
-  read(client, recu, DIRECTORY_LENGTH); //on lit le tube
+  read(client, recu, LENGTH_MAX); //on lit le tube
   client = 0;
   id = 0;
-  unlink(pseudo);
+  unlink(pseudo); //suppression du tube client
   printf("A bientôt %s !\n", pseudo);
-  free(pseudo);
+  free(pseudo);//free !
   free(intel);
   free(recu);
   free(standin);
@@ -71,12 +72,13 @@ void sendPublicMessageClient(char* buffer){
   sprintf(intel,"%4d%s%4d%4d%s",17+(int)strlen(buffer),"BCST",id,(int)strlen(buffer),buffer); //on crée l'intel MESSAGE PUBLIC
   intel[16+strlen(buffer)] = '\0';
   printf("!!!!! Intel %s\n", intel);
-  write(server,intel,strlen(intel));
+  write(server,intel,strlen(intel)); //on l'envoie au server
   free(intel);
 }
 
+/*Fonction de lecture de message */
 void readMessage(char* recu, char* type){
-  if(strcmp(type, "WRNG")!=0){
+  if(strcmp(type, "WRNG")!=0){ //si le message n'est pas une erreur
     char* psdSize = malloc(4*sizeof(char));
     int pseudoSize = atoi(strncpy(psdSize, recu+8, 4)); //on récupère la taille du pseudo du sender
     char* sender = malloc(pseudoSize*sizeof(char));
@@ -87,7 +89,7 @@ void readMessage(char* recu, char* type){
     char* message = malloc(messageSize+sizeof(char));
     strncpy(message, recu+16+pseudoSize, messageSize); //on récupère le message
     message[messageSize] = '\0';
-    if(strcmp(type,"BCST")==0){
+    if(strcmp(type,"BCST")==0){ //affichage du message
       printf("[%s] %s\n", sender, message);
     }
     if(strcmp(type,"PRVT")==0){
@@ -96,12 +98,12 @@ void readMessage(char* recu, char* type){
     if(strcmp(type,"OKPV")==0){
       printf("[%s-->%s] %s\n", pseudo,sender, message); //ici le nom sender n'est pas bon, c'est en fait le receiver du message privé
     }
-    free(psdSize);
+    free(psdSize); //free !
     free(sender);
     free(msgSize);
     free(message);
-  }else{
-    printf("Le destinataire choisi n'existe pas\n");
+  }else{ //s'il y a erreur
+    printf("Le destinataire choisi n'existe pas :(\n");
   }
 }
 
@@ -111,69 +113,38 @@ void sendPrivateMessageClient(char* buffer){
   char private[8];
   char to[2];
   char* receiver = malloc(strlen(buffer)*sizeof(char));
-  sscanf(buffer, "%s %s %s", private,to,receiver);
+  sscanf(buffer, "%s %s %s", private,to,receiver); //recupération des arguments
   char* message = malloc(strlen(buffer)*sizeof(char));
-  strncpy(message, buffer+12+strlen(receiver),strlen(buffer)-strlen(receiver)-12);
+  strncpy(message, buffer+12+strlen(receiver),strlen(buffer)-strlen(receiver)-12); //récupération du message
   printf("!!!!! messagePrivate %s\n", buffer);
   char* intel = malloc(21+strlen(buffer)*sizeof(char)); //string pour l'intel envoyé au serveur
-  sprintf(intel,"%4d%s%4d%4d%s%4d%s", 21+(int)strlen(buffer),"PRVT",id,(int)strlen(receiver),receiver,(int)strlen(message),message);
+  sprintf(intel,"%4d%s%4d%4d%s%4d%s", 21+(int)strlen(buffer),"PRVT",id,(int)strlen(receiver),receiver,(int)strlen(message),message); //construction de l'intel
   intel[20+strlen(buffer)]='\0';
-  write(server,intel,strlen(intel));
-  free(receiver);
+  write(server,intel,strlen(intel)); //envoi au server
+  free(receiver); //free !
   free(message);
   free(intel);
 }
+
+/*Fonction pour obtenir la liste des utilisateurs présents sur le chat */
 void listUsersClient(){
   char* intel = malloc(13*sizeof(char)); //string pour l'intel envoyé
   sprintf(intel,"%4d%s%4d",12,"LIST",id); //on crée l'intel
   intel[12]='\0';
-  write(server, intel, strlen(intel));//on écrit l'intel dans le tube client
+  write(server, intel, strlen(intel));//on écrit l'intel dans le tube server
   printf("Liste des utilisateurs connectés : \n");
   free(intel);
 }
-
-/*Fonction pour obtenir la liste des utilisateurs */
-/*void listUsersClient(){
-  char* intel = malloc(13*sizeof(char)); //string pour l'intel envoyé
-  sprintf(intel,"%4d%s%4d",12,"LIST",id); //on crée l'intel
-  intel[12]='\0';
-  write(server, intel, strlen(intel));//on écrit l'intel dans le tube client
-  printf("Liste des utilisateurs connectés : \n");
-  char* idC = malloc(4*sizeof(char)); //String id
-  char* buffer = malloc(DIRECTORY_LENGTH*sizeof(char));
-  char* pseudo = malloc(DIRECTORY_LENGTH*sizeof(char));
-  int index = 0;
-  int nbUsers = 0;
-  while(1){
-    read(client,buffer,DIRECTORY_LENGTH);
-    buffer[(int)(strlen(buffer))]='\0';
-    strncpy(pseudo, buffer+12, strlen(buffer)-12);
-    pseudo[(int)(strlen(pseudo))]='\0';
-    printf("#-  %s \n",pseudo);
-    if(index==0){
-      strncpy(idC,buffer+8,4); //on le stocke dans idC
-      nbUsers=atoi(idC);
-    }
-    index++;
-    if(index>=nbUsers) break;
-  }
-}*/
-
 
 /*Fonction pour forcer la déconnexion de tous les id + shutdown du serveur  */
 void shutClient(){
   printf("Je lance ShutClient\n");
   char* intel = malloc(13*sizeof(char)); //infos envoyées au serveur
-  sprintf(intel,"%4d%s%4d",12,"SHUT",id); //on crée l'intel CONNEXION correspondant
+  sprintf(intel,"%4d%s%4d",12,"SHUT",id); //on crée l'intel correspondant
   intel[12]='\0';
   write(server, intel, 13); //on l'envoie au server
   printf("j'envoie : %s\n",intel);
-  char* recu = malloc((8+strlen(pseudo))*sizeof(char)); //message recu du serveur
-  //read(client, recu, DIRECTORY_LENGTH); //on lit le tube
-  //deconnexionClient();
   free(intel); //et on free !
-  free(recu);
-  //exit(0);
 }
 
 /*Fonction pour débugger le serveur */
@@ -184,57 +155,56 @@ void debugClient(){
 /*Fonction pour envoyer un fichier */
 void sendFileClient(char* buffer){
   printf("Je lance sendFile\n");
-  char* name = malloc(DIRECTORY_LENGTH*sizeof(char));
+  char* name = malloc(LENGTH_MAX*sizeof(char)); //élements du message recu, on stocke tout
   char* send = malloc(5*sizeof(char));
   char* file = malloc(5*sizeof(char));
   char* to = malloc(2*sizeof(char));
-  char* destinataire = malloc(DIRECTORY_LENGTH*sizeof(char));
-  sscanf(buffer, "%s %s %s %s %s",send,file,name,to,destinataire);
-  //strncpy(name, buffer+24+strlen(pseudo),strlen(buffer)-24-strlen(pseudo));
+  char* destinataire = malloc(LENGTH_MAX*sizeof(char));
+  sscanf(buffer, "%s %s %s %s %s",send,file,name,to,destinataire); // on range tout là où il faut
   name[(int)strlen(name)]='\0';
   destinataire[(int)strlen(destinataire)]='\0';
-  struct stat buffer2;
-  stat(name,&buffer2);
-  int longueurF = buffer2.st_size;
-  if(longueurF>=0){
-    char* intel = malloc(DIRECTORY_LENGTH*sizeof(char)); //infos envoyées au serveur
-    sprintf(intel,"%4d%s%4d%4d%4d%s%8d%4d%s",24+(int)strlen(pseudo)+3,"FILE",0,id,(int) strlen(destinataire),destinataire,longueurF,strlen(name),name); //on crée l'intel CONNEXION correspondant
+  struct stat buffer2; //pour avoir des infos sur le fichier
+  stat(name,&buffer2); //on prend son nom
+  int longueurF = buffer2.st_size; //= wc fichier : nombre de caractères
+  if(longueurF>=0){ // si la longueur est négative le fichier n'existe pas
+    char* intel = malloc(LENGTH_MAX*sizeof(char)); //infos envoyées au serveur
+    sprintf(intel,"%4d%s%4d%4d%4d%s%8d%4d%s",24+(int)strlen(pseudo)+3,"FILE",0,id,(int) strlen(destinataire),destinataire,longueurF,strlen(name),name); //on crée l'intel correspondant
     intel[(int) strlen(intel)]='\0';
     write(server, intel, strlen(intel)); //on l'envoie au server
-    char* answer = malloc(DIRECTORY_LENGTH*sizeof(char)); //infos recues du serveur
-    read(client,answer, DIRECTORY_LENGTH);
+    char* answer = malloc(LENGTH_MAX*sizeof(char)); //infos recues du serveur
+    read(client,answer, LENGTH_MAX);
     char* type = malloc(5*sizeof(char));
     strncpy(type,answer+4,4);
     type[4]='\0';
-    if(strcmp(type,"OKOK")==0){
+    if(strcmp(type,"OKOK")==0){ //si le server valide
       char* idTransfertC = malloc(4*sizeof(char));
-      int idTransfert;
+      int idTransfert; //id du transfert
       strncpy(idTransfertC,buffer+8,4);
       idTransfert = atoi(idTransfertC);
-      int nbMessages = longueurF/256 + 1;
+      int nbMessages = longueurF/256 + 1; //on calcule le nombre de messages nécessaires
       int i;
-      FILE* fichier = fopen(name,"r");
+      FILE* fichier = fopen(name,"r"); //le fichier à envoyer
       char* parcours = malloc(257*sizeof(char));
-      char* datas = malloc(DIRECTORY_LENGTH*sizeof(char));
+      char* datas = malloc(LENGTH_MAX*sizeof(char));
       for(i=0;i<nbMessages;i++){
-	fread(parcours,sizeof(char),256,fichier);
+	fread(parcours,sizeof(char),256,fichier); //on va chercher les données dans le fichier
         parcours[(int) strlen(parcours)]='\0';
-	sprintf(datas,"%4d%s%4d%4d%4d%s",20+strlen(parcours),"FIOK",i+1,idTransfert,strlen(parcours),parcours); //on crée l'intelBad
+	sprintf(datas,"%4d%s%4d%4d%4d%s",20+strlen(parcours),"FIOK",i+1,idTransfert,strlen(parcours),parcours); //on crée les données
 	datas[strlen(datas)]='\0';
-	write(server, datas, 256); //on l'envoie au server
+	write(server, datas, 256); //on les envoie au server
       }
+      fclose(fichier); //à la fin : fermeture du fichier
     }
     else{
       printf("SNIF, erreur d'envoi :(\n");
     }
   }
   else printf("Aie, votre fichier n'existe pas ! :(\n");
-  //TODO: Ecrire cette fonction
 }
 
+/* Main Client principal */
 void mainClient(){
-  //TODO: faire un help des commandes
-  char* buffer = malloc(DIRECTORY_LENGTH*sizeof(char));
+  char* buffer = malloc(LENGTH_MAX*sizeof(char));
   char* private = malloc(11*sizeof(char));
   char* users = malloc(6*sizeof(char));
   char* shut = malloc(5*sizeof(char));
@@ -249,69 +219,69 @@ void mainClient(){
     int n = select(MAX(0,client) + 1,&readers,NULL, NULL, NULL);
     if(n>0){
       if(FD_ISSET(client, &readers)){
-      	l = read(client,buffer, DIRECTORY_LENGTH);
+      	l = read(client,buffer, LENGTH_MAX);
         printf("Je capte qqch dans le tube ! %d\n",l);
       	memcpy(type,&buffer[4],4);
       	type[4]='\0';
       	buffer[l]='\0';
       	switch (l) {
-        	case 0 | 1:
-        	  printf("Aie, chaine vide\n");
-        	  break;
-        	case -1:
-        	  perror("Mauvaise lecture stdin\n");
-        	  break;
-        	default:
-        	  printf("Buffer recu : %s de type %s\n",buffer,type);
-        	  if(strcmp("SHUT",type)==0){
-        	    free(buffer);
-        	    free(private);
-        	    free(users);
-        	    free(shut);
-        	    free(debug);
-        	    free(send);
-        	    free(type);
-        	    deconnexionClient();
-        	    exit(0);
-        	  }
-            else if(strcmp("BCST",type)==0){
-              readMessage(buffer,"BCST");
-            }
-            else if(strcmp("PRVT",type)==0){
-              readMessage(buffer,"PRVT");
-            }
-            else if(strcmp("OKPV",type)==0){
-              readMessage(buffer,"OKPV");
-            }
-            else if(strcmp("BADD",type)==0){
-              readMessage(buffer,"WRNG");
-            }
-	    else if(strcmp("FIOK",type)==0){
-	      char* recu = malloc(256*sizeof(char));
-	      strncpy(recu,buffer+20,256);
-	      printf("%s",recu);
-            }
-            else if(strcmp("LIST",type)==0){
-              printf("Je suis la !\n");
-              char* pseudo = malloc(DIRECTORY_LENGTH*sizeof(char));
-              char* i = malloc(4*sizeof(char));
-              char* len = malloc(4*sizeof(char));
-              int rlen = 0;
-              strncpy(len,buffer,4);
-              rlen = atoi(len);
-              strncpy(pseudo, buffer+12, rlen-12);
-              pseudo[rlen-12]='\0';
-              printf("#-  %s #\n",pseudo);
-              free(pseudo);
-              free(i);
-              free(len);
-            }
-        	  break;
-        	}
+	case 0 | 1:
+	  printf("Aie, chaine vide\n");
+	  break;
+	case -1:
+	  perror("Mauvaise lecture stdin\n");
+	  break;
+	default:
+	  printf("Buffer recu : %s de type %s\n",buffer,type);
+	  if(strcmp("SHUT",type)==0){
+	    free(buffer);
+	    free(private);
+	    free(users);
+	    free(shut);
+	    free(debug);
+	    free(send);
+	    free(type);
+	    deconnexionClient();
+	    exit(0);
+	  }
+	  else if(strcmp("BCST",type)==0){
+	    readMessage(buffer,"BCST");
+	  }
+	  else if(strcmp("PRVT",type)==0){
+	    readMessage(buffer,"PRVT");
+	  }
+	  else if(strcmp("OKPV",type)==0){
+	    readMessage(buffer,"OKPV");
+	  }
+	  else if(strcmp("BADD",type)==0){
+	    readMessage(buffer,"WRNG");
+	  }
+	  else if(strcmp("FIOK",type)==0){
+	    char* recu = malloc(256*sizeof(char));
+	    strncpy(recu,buffer+20,256);
+	    printf("%s",recu);
+	  }
+	  else if(strcmp("LIST",type)==0){
+	    printf("Je suis la !\n");
+	    char* pseudo = malloc(LENGTH_MAX*sizeof(char));
+	    char* i = malloc(4*sizeof(char));
+	    char* len = malloc(4*sizeof(char));
+	    int rlen = 0;
+	    strncpy(len,buffer,4);
+	    rlen = atoi(len);
+	    strncpy(pseudo, buffer+12, rlen-12);
+	    pseudo[rlen-12]='\0';
+	    printf("#-  %s #\n",pseudo);
+	    free(pseudo);
+	    free(i);
+	    free(len);
+	  }
+	  break;
+	}
       }
       if(FD_ISSET(0, &readers)){
       	printf("Je capte qqch sur stdin !\n");
-      	fgets(buffer,DIRECTORY_LENGTH,stdin);
+      	fgets(buffer,LENGTH_MAX,stdin);
       	l = strlen(buffer)-1;
       	buffer[l]='\0';
       	printf("Buffer : %s de longueur %d\n",buffer,l);

@@ -13,7 +13,7 @@ void connexionServer(char* buffer, int l);
 void deconnexionServer(char* buffer, int l);
 void sendPublicMessageServer(char* buffer, int l);
 void sendPrivateMessageServer(char* buffer, int l);
-void listUsersServer();
+void listUsersServer(char* buffer, int l);
 void shutServer();
 void debugServer();
 void sendFileServer(char* buffer, int l);
